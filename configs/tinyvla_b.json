@@ -1,0 +1,44 @@
+{
+  "status": "integration_recipe_not_a_trained_checkpoint",
+  "repository": "https://github.com/liyaxuanliyaxuan/TinyVLA",
+  "revision": "94f441827b45e4f76316ef6a0ae443736dc93a5d",
+  "backbone": "lesjie/Llava-Pythia-700M",
+  "backbone_revision": "9ac93b5370af5a0b6e66ffa2b60e0316489826d5",
+  "action_head_type": "droid_diffusion",
+  "action_dim": 3,
+  "state_dim": 3,
+  "chunk_size": 16,
+  "execution_prefix": 1,
+  "temporal_aggregation": false,
+  "camera_names": ["screen"],
+  "model_max_length": 2048,
+  "scheduler": {
+    "class": "DDIMScheduler",
+    "prediction_type": "epsilon",
+    "num_train_timesteps": 100,
+    "beta_schedule": "squaredcos_cap_v2",
+    "clip_sample": true,
+    "set_alpha_to_one": true,
+    "steps_offset": 0,
+    "inference_steps": 10
+  },
+  "adaptation_starting_point": {
+    "lora_enable": true,
+    "lora_r": 64,
+    "lora_alpha": 256,
+    "lora_module": "vit llm",
+    "tune_mm_mlp_adapter": true,
+    "freeze_vision_tower": true,
+    "freeze_backbone": true,
+    "learning_rate": 0.0002,
+    "non_lora_lr": 0.00002
+  },
+  "required_audits_before_training": [
+    "actual trainable module names and parameter count after LoRA/freezing",
+    "readability after native image processor resizing/padding",
+    "actual visual token count and longest full procedure/history",
+    "replace upstream two-camera processor and random split loader",
+    "normalize masked epsilon loss by valid positions per example",
+    "record optimizer, data mixture, compute budget, and sampling seeds"
+  ]
+}
