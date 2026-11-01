@@ -10,6 +10,7 @@ from PIL import Image
 
 from .collection import write_json
 from .contracts import HistoryEntry, MouseAction, format_context
+from .tasks import FAMILIES
 
 
 def read_rows(directory: Path) -> list[dict]:
@@ -159,7 +160,17 @@ def export_hdf5(
             string = h5py.string_dtype("utf-8")
             f.create_dataset("language_raw", data=[episode["instruction"]], dtype=string)
             f.create_dataset("language_per_timestep", data=language, dtype=string)
-        index.append({"file": name, "length": len(rows), "source_episode": directory.name})
+        item = {"file": name, "length": len(rows), "source_episode": directory.name}
+        # Sampling/split provenance lives only in the index, never in policy inputs.
+        instance = json.loads((directory / "private.json").read_text())["instance"]
+        for key in ("task", "order", "wording", "values_seed", "layout_seed", "order_seed"):
+            if key in instance:
+                item[key] = instance[key]
+        if "id" in instance:
+            item["instance_id"] = instance["id"]
+        if instance.get("task") in FAMILIES:
+            item["component_count"] = len(FAMILIES[instance["task"]])
+        index.append(item)
     metadata = {
         "version": 1,
         "split": split,

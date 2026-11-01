@@ -40,6 +40,68 @@ def implementation_digest() -> str:
     return digest.hexdigest()
 
 
+class ResumeConfigurationError(ValueError):
+    """A saved run cannot safely resume with the requested configuration."""
+
+
+def _changed_fields(saved: dict, requested: dict, prefix: str = "") -> list[str]:
+    changed = []
+    for key in sorted(saved.keys() | requested.keys()):
+        name = f"{prefix}.{key}" if prefix else key
+        if key not in saved or key not in requested:
+            changed.append(name)
+        elif isinstance(saved[key], dict) and isinstance(requested[key], dict):
+            changed.extend(_changed_fields(saved[key], requested[key], name))
+        elif saved[key] != requested[key]:
+            changed.append(name)
+    return changed
+
+
+def _compatible_collection_update(saved: dict, requested: dict) -> bool:
+    # Exact, reviewed source pairs only. The JSON resource is excluded from the
+    # .py/.html fingerprint so adding its destination hash is not self-referential.
+    path = Path(__file__).parent / "assets" / "resume_compatibility.json"
+    known = json.loads(path.read_text())["collect"]
+    return requested["implementation_digest"] in known.get(saved.get("implementation_digest"), [])
+
+
+def _resume_config(path: Path, requested: dict) -> None:
+    saved = json.loads(path.read_text())
+    history = saved.pop("resume_history", [])
+    changed = _changed_fields(saved, requested)
+    if not changed:
+        return
+    allowed = set()
+    if saved.get("mode") == requested["mode"] == "collect":
+        old_limit = saved.get("attempts_per_instance")
+        if isinstance(old_limit, int) and requested["attempts_per_instance"] > old_limit:
+            allowed.add("attempts_per_instance")
+        if "implementation_digest" in changed and _compatible_collection_update(saved, requested):
+            allowed.add("implementation_digest")
+    incompatible = [name for name in changed if name not in allowed]
+    if incompatible:
+        details = ", ".join(incompatible)
+        hint = "Keep the saved settings or choose a new output directory."
+        if "attempts_per_instance" in incompatible:
+            old_limit = saved.get("attempts_per_instance")
+            new_limit = requested["attempts_per_instance"]
+            details += f" (saved --attempts {old_limit}, requested --attempts {new_limit})"
+            hint = (
+                f"For this collection run use --attempts {old_limit} or a higher limit; "
+                "other settings must match. Otherwise choose a new output directory."
+            )
+        raise ResumeConfigurationError(f"Resume configuration differs: {details}. {hint}")
+    history.append(
+        {
+            "changed_utc": datetime.now(UTC).isoformat(),
+            "recorded_attempts": len(list((path.parent / "episodes").glob("*/private.json"))),
+            "changes": {name: {"old": saved[name], "new": requested[name]} for name in changed},
+        }
+    )
+    # Persist the cap and its history together, before any additional attempts.
+    write_json(path, {**requested, "resume_history": history})
+
+
 def run_episode(
     env: BrowserEnvironment,
     policy: Policy,
@@ -217,8 +279,7 @@ def run(
     }
     run_path = output / "run.json"
     if run_path.exists():
-        if json.loads(run_path.read_text()) != config:
-            raise ValueError("Resume configuration differs; use a new output directory")
+        _resume_config(run_path, config)
     else:
         write_json(run_path, config)
         write_json(output / "manifest.json", manifest.model_dump())

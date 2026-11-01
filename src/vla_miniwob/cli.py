@@ -7,7 +7,7 @@ from typing import Annotated
 
 import typer
 
-from .collection import run, write_json
+from .collection import ResumeConfigurationError, run, write_json
 from .contracts import MouseAction
 from .dataset import export_hdf5
 from .environment import BrowserEnvironment
@@ -70,20 +70,24 @@ def collect(
     """Collect training demonstrations with Astra; keep all rejected attempts too.
 
     max-episodes limits NEW attempts this invocation, including failures. Resume
-    with the same output directory/configuration. Calls incur OpenAI API usage.
+    with the same output directory. The attempts limit may be increased; other
+    collection settings stay fixed. Calls incur OpenAI API usage.
     """
     value = read_manifest(manifest_path)
     policy = _teacher(model, reasoning)
-    result = run(
-        value,
-        output,
-        policy,
-        mode="collect",
-        split="train",
-        max_episodes=max_episodes,
-        attempts=attempts,
-        headless=headless,
-    )
+    try:
+        result = run(
+            value,
+            output,
+            policy,
+            mode="collect",
+            split="train",
+            max_episodes=max_episodes,
+            attempts=attempts,
+            headless=headless,
+        )
+    except ResumeConfigurationError as exc:
+        raise typer.BadParameter(str(exc)) from None
     write_json(output / "report.json", report(output))
     typer.echo(json.dumps(result))
 
@@ -109,16 +113,19 @@ def evaluate(
     else:
         config = json.loads(policy_config.read_text()) if policy_config else {}
         agent = load_policy(policy, config)
-    result = run(
-        value,
-        output,
-        agent,
-        mode="evaluate",
-        split=split,
-        max_episodes=max_episodes,
-        attempts=1,
-        headless=headless,
-    )
+    try:
+        result = run(
+            value,
+            output,
+            agent,
+            mode="evaluate",
+            split=split,
+            max_episodes=max_episodes,
+            attempts=1,
+            headless=headless,
+        )
+    except ResumeConfigurationError as exc:
+        raise typer.BadParameter(str(exc)) from None
     write_json(output / "report.json", report(output))
     typer.echo(json.dumps(result))
 
@@ -129,6 +136,107 @@ def report_command(run_directory: Path):
     value = report(run_directory)
     write_json(run_directory / "report.json", value)
     typer.echo(json.dumps(value, indent=2))
+
+
+@app.command("train-tinyvla")
+def train_tinyvla(
+    source: Path,
+    output: Path,
+    config: Path = Path("configs/tinyvla_b.json"),
+    dev_source: Path | None = None,
+    max_steps: Annotated[int | None, typer.Option(min=1)] = None,
+    batch_size: Annotated[int | None, typer.Option(min=1)] = None,
+    gradient_accumulation: Annotated[int | None, typer.Option(min=1)] = None,
+    device: str = "cuda",
+    dtype: str = "bfloat16",
+    resume: bool = False,
+    preflight_only: bool = False,
+):
+    """Fine-tune TinyVLA-B from accepted raw trajectories or a train HDF5 export.
+
+    Run in the pinned integrations/tinyvla uv environment. A training directory
+    contains checkpoints, metrics, tokenizer/context audits and vision previews.
+    Resume with the same data/settings; only max-steps can increase.
+    """
+    from .training import train
+
+    recipe = json.loads(config.read_text())
+    recipe.setdefault("training", {})
+    for key, value in (
+        ("max_steps", max_steps),
+        ("batch_size", batch_size),
+        ("gradient_accumulation", gradient_accumulation),
+    ):
+        if value is not None:
+            recipe["training"][key] = value
+    try:
+        result = train(
+            source,
+            output,
+            recipe,
+            dev_source=dev_source,
+            device=device,
+            dtype=dtype,
+            resume=resume,
+            preflight_only=preflight_only,
+        )
+    except ImportError as error:
+        raise typer.BadParameter(
+            "TinyVLA dependencies are missing. Run bash scripts/setup_tinyvla.sh cuda, then "
+            "uv run --project integrations/tinyvla --frozen --extra cuda vla-benchmark ..."
+        ) from error
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
+    typer.echo(json.dumps(result))
+
+
+@app.command("evaluate-tinyvla")
+def evaluate_tinyvla(
+    checkpoint: Path,
+    manifest_path: Path,
+    output: Path,
+    split: str = "eval",
+    max_episodes: Annotated[int | None, typer.Option(min=1)] = None,
+    device: str = "cuda",
+    dtype: str | None = None,
+    headless: bool = True,
+):
+    """Run a TinyVLA checkpoint autonomously on every dev/eval instance by default.
+
+    CHECKPOINT may name a checkpoint directory or its training run (latest).
+    Each observation gets one sampled H=16 chunk and executes K=1 primitive.
+    """
+    from .tinyvla_policy import TinyVLAPolicy
+
+    value = read_manifest(manifest_path)
+    if split not in ("dev", "eval"):
+        raise typer.BadParameter("TinyVLA evaluation split must be dev or eval")
+    if value.prediction_horizon != 16 or value.execution_prefix != 1:
+        raise typer.BadParameter("TinyVLA-B evaluation requires manifest H=16 and K=1")
+    episodes = sum(instance.split == split for instance in value.instances)
+    if episodes == 0:
+        raise typer.BadParameter(f"Manifest contains no {split} instances")
+    try:
+        agent = TinyVLAPolicy(checkpoint, device=device, dtype=dtype)
+        result = run(
+            value,
+            output,
+            agent,
+            mode="evaluate",
+            split=split,
+            max_episodes=max_episodes or episodes,
+            attempts=1,
+            headless=headless,
+        )
+    except ImportError as error:
+        raise typer.BadParameter(
+            "Use the pinned training runtime: uv run --project integrations/tinyvla "
+            "--frozen --extra cuda vla-benchmark evaluate-tinyvla ..."
+        ) from error
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
+    write_json(output / "report.json", report(output))
+    typer.echo(json.dumps(result))
 
 
 @app.command()

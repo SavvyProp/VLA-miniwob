@@ -63,12 +63,29 @@ trajectories without running them. See the official [model documentation](https:
 and [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
 
 `--max-episodes` bounds **new attempts per invocation**, including failures;
-`--attempts` bounds collection retries per instance. With the default 64-step
+`--attempts` bounds total collection attempts per instance, including its first
+attempt. With the default 64-step
 budget this is at most 640 logical action requests for 10 attempts, plus SDK
 transport retries. API calls incur usage charges. Repeating the same command
-resumes without overwriting existing attempts. Changing the manifest, policy,
-implementation, or runtime requires a new run directory. Only validated success
-is exported; rejected and interrupted attempts remain auditable.
+resumes without overwriting existing attempts. You can increase `--attempts` on
+resume: accepted instances are skipped, and exhausted failures become eligible
+for the additional attempts. The increase is recorded in `run.json` under
+`resume_history`. Continue using that new limit on later invocations; decreasing
+it is rejected. Changing the manifest, policy, or runtime requires a new run
+directory. Source changes also require a new directory unless an exact reviewed
+compatibility entry exists; this resume fix includes one for the initial release.
+Only validated success is exported; rejected and interrupted attempts remain auditable.
+
+To process the full 114-instance pilot with up to three attempts per instance:
+
+```bash
+uv run --frozen vla-benchmark collect configs/pilot.json runs/astra-train \
+  --max-episodes 342 --attempts 3
+```
+
+The command stops when it has processed all eligible instances, even if fewer
+than 342 new attempts are needed. Existing attempts count toward each instance's
+limit. A run that exhausts three attempts on an instance may still have a shortfall.
 
 Collection is restricted to training instances. For a separate, single-attempt
 frontier reference or development check:
@@ -105,12 +122,26 @@ built within a single episode; padding is masked. Only successful **training**
 episodes fit normalization. Evaluator goals, DOM, order ledger, rewards, and
 future screenshots are excluded from policy samples and HDF5 files.
 
-For TinyVLA-B, see [the audited integration guide](docs/tinyvla.md) and
-[pinned configuration](configs/tinyvla_b.json). A Torch dataset bridge and a
-single-camera processor bridge are included. The training runtime remains
-separate because upstream TinyVLA has older model-library requirements. The
-benchmark does **not** yet include a verified end-to-end TinyVLA trainer,
-fine-tuned weights, or claims of GUI competence from the released backbone.
+TinyVLA-B training and checkpoint evaluation use a separate pinned uv runtime:
+
+```bash
+bash scripts/setup_tinyvla.sh cuda
+uv run --project integrations/tinyvla --frozen --extra cuda \
+  vla-benchmark train-tinyvla runs/astra-train runs/tinyvla-b --max-steps 2000
+uv run --project integrations/tinyvla --frozen --extra cuda \
+  vla-benchmark evaluate-tinyvla runs/tinyvla-b configs/pilot.json \
+  runs/tinyvla-b-eval --split eval
+```
+
+Training automatically exports accepted demonstrations, checks full context,
+records vision previews, trains native diffusion/LoRA/projector parameters and
+saves resumable checkpoints. Defaults target a single RTX 3090. Add `--resume`
+with the same settings to continue training. Evaluation runs every instance in
+the selected split by default and writes the existing benchmark reports.
+See [training, resume and evaluation details](docs/tinyvla.md) and the
+[configuration](configs/tinyvla_b.json). Native model and training mechanics are
+CPU-tested; full pretrained GPU training, memory fit, and GUI scores remain to
+be measured on your machine.
 
 Other VLA models implement the small [Policy protocol](src/vla_miniwob/contracts.py):
 `reset(seed)`, `predict(observation) -> H×3`, and `provenance()`. Predictions must

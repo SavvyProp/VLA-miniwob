@@ -1,0 +1,67 @@
+[project]
+name = "vla-miniwob-tinyvla-runtime"
+version = "0.1.0"
+description = "Pinned, optional TinyVLA training and browser evaluation environment"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "vla-miniwob",
+  "act",
+  "llava-pythia",
+  "torch==2.6.0",
+  "torchvision==0.21.0",
+  "transformers==4.37.1",
+  "tokenizers==0.15.0",
+  "diffusers==0.27.2",
+  "huggingface-hub==0.25.2",
+  "peft==0.10.0",
+  "accelerate==0.28.0",
+  "numpy==1.26.4",
+  "einops==0.6.1",
+  "timm==0.6.13",
+  "ipython>=8,<9",
+  "sentencepiece==0.2.0",
+]
+
+[project.optional-dependencies]
+cpu = ["torch", "torchvision"]
+cuda = ["torch", "torchvision"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.9"]
+
+[tool.uv]
+package = false
+conflicts = [[{ extra = "cpu" }, { extra = "cuda" }]]
+
+[tool.uv.sources]
+vla-miniwob = { path = "../..", editable = true }
+# The upstream root setup.py installs policy_heads as part of the 'act' package.
+act = { git = "https://github.com/liyaxuanliyaxuan/TinyVLA", rev = "94f441827b45e4f76316ef6a0ae443736dc93a5d" }
+llava-pythia = { git = "https://github.com/liyaxuanliyaxuan/TinyVLA", rev = "94f441827b45e4f76316ef6a0ae443736dc93a5d", subdirectory = "llava-pythia" }
+miniwob = { git = "https://github.com/Farama-Foundation/miniwob-plusplus", rev = "33c3b4ddef8c6eb67c57a29663d844b1eda7e614" }
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cuda", extra = "cuda" },
+]
+torchvision = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cuda", extra = "cuda" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+# Reuse native TinyVLA code with the single-device dependencies above. The
+# upstream metadata also requires obsolete UI, robot, quantization and DeepSpeed
+# packages. None are used by our training loop or browser inference adapter.
+[[tool.uv.dependency-metadata]]
+name = "llava-pythia"
+version = "1.0.0"
+requires-dist = []

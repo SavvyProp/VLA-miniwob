@@ -95,12 +95,22 @@ adapters declare their H in provenance. K is fixed by the manifest, initially 1.
 There is one sampled chunk per decision and no temporal averaging or private
 validator selection among candidate samples.
 
-Collection retries an instance up to its fixed attempt limit and accepts only
-complete valid trajectories. All failures are retained. Evaluation attempts each
+Collection retries an instance up to its recorded total attempt limit and accepts
+only complete valid trajectories. The limit may be increased on resume without
+repeating accepted instances or overwriting failures. `run.json` atomically records
+the previous/new limits, UTC change time, and number of already recorded attempts
+in `resume_history`. Increasing this budget changes the data-collection protocol;
+report the budget and its history with data yield. Decreases are rejected.
+All failures are retained. Evaluation attempts each
 declared instance once. Infrastructure failures are reported separately and
 excluded; model failures remain in the denominator. An interrupted attempt is
 retained rather than silently overwritten. Resume fingerprints include code,
-runtime, manifest, and policy. Use one writer per run directory; concurrent
+runtime, manifest, and policy. A packaged compatibility resource permits only
+explicitly reviewed source fingerprint pairs for collection; the initial
+retry-resume fix preserves the rollout implementation. Both source fingerprints
+are retained in `resume_history` when that migration is used. Unlisted source
+changes and changes to runtime, manifest, or policy still require a new run.
+Use one writer per run directory; concurrent
 collection/sharding is not implemented.
 
 Reports average within order/wording cells, then equally across observed cells

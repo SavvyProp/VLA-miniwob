@@ -1,5 +1,5 @@
 {
-  "status": "integration_recipe_not_a_trained_checkpoint",
+  "status": "trainable_gui_recipe_not_a_trained_checkpoint",
   "repository": "https://github.com/liyaxuanliyaxuan/TinyVLA",
   "revision": "94f441827b45e4f76316ef6a0ae443736dc93a5d",
   "backbone": "lesjie/Llava-Pythia-700M",
@@ -33,12 +33,20 @@
     "learning_rate": 0.0002,
     "non_lora_lr": 0.00002
   },
-  "required_audits_before_training": [
-    "actual trainable module names and parameter count after LoRA/freezing",
-    "readability after native image processor resizing/padding",
-    "actual visual token count and longest full procedure/history",
-    "replace upstream two-camera processor and random split loader",
-    "normalize masked epsilon loss by valid positions per example",
-    "record optimizer, data mixture, compute budget, and sampling seeds"
-  ]
+  "training": {
+    "max_steps": 2000,
+    "batch_size": 1,
+    "gradient_accumulation": 8,
+    "learning_rate": 0.0002,
+    "non_lora_lr": 0.00002,
+    "weight_decay": 0.01,
+    "warmup_steps": 100,
+    "gradient_clip": 1.0,
+    "save_every": 250,
+    "validate_every": 250,
+    "validation_batches": 32,
+    "seed": 2026,
+    "balanced_sampling": true,
+    "gradient_checkpointing": true
+  }
 }
