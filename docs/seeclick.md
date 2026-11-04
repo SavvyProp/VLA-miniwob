@@ -59,17 +59,42 @@ driver must support their CUDA 12.4 runtime.
 
 ## Train from expert demonstrations
 
-From the repository root:
+From the repository root, collect all three splits in one invocation. Set
+`OPENAI_API_KEY` in `.env` first:
+
+```bash
+uv run --env-file .env --frozen scriptwob collect \
+  configs/seed_suite.json runs/astra-all \
+  --all-splits --attempts 3 --max-total-steps 10000
+```
+
+Training demonstrations go into `runs/astra-all/train`; expert development and
+test rollouts go into `runs/astra-all/dev` and `runs/astra-all/test`. Train allows
+retries, while dev/test get one attempt per task. The request budget covers all
+three splits, so check the root `report.json` for coverage and unfinished work.
+The root report refreshes between splits; each split's report refreshes after
+every attempt.
+Empty splits are reported as skipped; `--max-episodes N` limits each split to N
+tasks. Without `--all-splits`, collection remains train-only.
+
+Add `--fresh` to collect from the beginning in a unique root directory, preserving
+previous runs. It prints the actual root; use `<printed-root>/train` in the
+training commands below. Expert dev/test rollouts remain separate from training
+and are not required to run SeeClick evaluation.
+
+Install the training runtime, then fine-tune using only the training split:
 
 ```bash
 uv sync --project integrations/seeclick --extra cuda --frozen
 uv run --project integrations/seeclick --extra cuda --frozen \
-  scriptwob train-seeclick runs/astra-train runs/seeclick \
+  scriptwob train-seeclick runs/astra-all/train runs/seeclick \
   --config configs/seeclick_3090.json
 ```
 
-`runs/astra-train` must be a scriptWoB training collection. The command freezes its
-accepted demonstrations into `runs/seeclick/dataset/`, then tokenizes and trains.
+The source must be a scriptWoB training collection. For the combined run, pass
+its `train` subdirectory; for a train-only run, pass its output directory directly.
+The command freezes its accepted demonstrations into `runs/seeclick/dataset/`,
+then tokenizes and trains.
 New demonstrations added to the source collection later do not change this frozen
 training snapshot. Use a new training output to train on more data.
 
@@ -90,7 +115,7 @@ evaluator state or frontier-model reasoning is used as supervision.
 
 ```bash
 uv run --project integrations/seeclick --extra cuda --frozen \
-  scriptwob train-seeclick runs/astra-train runs/seeclick \
+  scriptwob train-seeclick runs/astra-all/train runs/seeclick \
   --config configs/seeclick_3090.json --prepare-only
 ```
 
@@ -108,7 +133,7 @@ a final complete optimizer checkpoint even when fewer than 100 updates were run.
 
 ```bash
 uv run --project integrations/seeclick --extra cuda --frozen \
-  scriptwob train-seeclick runs/astra-train runs/seeclick \
+  scriptwob train-seeclick runs/astra-all/train runs/seeclick \
   --config configs/seeclick_3090.json --resume --max-steps 500
 ```
 

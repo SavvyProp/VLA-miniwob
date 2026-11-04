@@ -32,7 +32,7 @@ def _print(value):
     typer.echo(json.dumps(value, indent=2, allow_nan=False))
 
 
-def _run_rollouts(manifest, output: Path, policy, *, fresh: bool, **kwargs):
+def _run_rollouts(manifest, output: Path, policy, *, fresh: bool, run_function=None, **kwargs):
     if fresh:
         # Reserve a unique sibling atomically, without reading or modifying the
         # old run. mkdtemp adds a random suffix even for concurrent invocations.
@@ -41,7 +41,7 @@ def _run_rollouts(manifest, output: Path, policy, *, fresh: bool, **kwargs):
         output = Path(tempfile.mkdtemp(prefix=f"{output.name}-{timestamp}-", dir=output.parent))
         typer.echo(f"Fresh run directory: {output.resolve()}", err=True)
     try:
-        return run(manifest, output, policy, **kwargs)
+        return (run_function or run)(manifest, output, policy, **kwargs)
     except ResumeConfigurationError as exc:
         typer.echo(f"Error: {exc} Use --fresh to start a separate run.", err=True)
         raise typer.Exit(1) from None
@@ -216,22 +216,28 @@ def collect(
     fresh: Annotated[bool, typer.Option(
         help="Start from the beginning in a new, uniquely named sibling output directory."
     )] = False,
+    all_splits: Annotated[bool, typer.Option(
+        help="Collect train demonstrations and dev/test expert rollouts in separate subdirectories."
+    )] = False,
 ):
-    """Collect successful train demonstrations. Use --fresh for a separate new run.
+    """Collect demonstrations; add --all-splits to include dev/test expert rollouts.
 
-    Without --fresh, re-running resumes and limits may increase.
-    max-episodes selects a prefix of train instances. max-total-steps bounds NEW
-    model calls this invocation. A budget-cut attempt is retained as unsuccessful.
+    Use --fresh for a separate new run. Otherwise, re-running resumes.
+    max-episodes selects a prefix per split. max-total-steps bounds NEW model
+    calls across the entire invocation. Dev/test each allow one attempt per task.
+    A budget-cut attempt is retained as unsuccessful.
     Oracle is privileged reference supervision, never frontier-model supervision.
     """
+    from .suite import collect_suite
+
     manifest = read_manifest(manifest_path)
     result = _run_rollouts(
         manifest,
         output,
         _policy(teacher, model, reasoning, max_output_tokens),
         fresh=fresh,
-        mode="collect",
-        split="train",
+        run_function=collect_suite if all_splits else None,
+        **({} if all_splits else {"mode": "collect", "split": "train"}),
         attempts=attempts,
         max_episodes=max_episodes,
         max_total_steps=max_total_steps,

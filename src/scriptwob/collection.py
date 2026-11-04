@@ -83,6 +83,12 @@ def _writer_lock(root: Path):
 
 
 def _prepare_run(output: Path, config: dict, manifest: Manifest, limits: dict) -> None:
+    if (output / "suite.json").exists():
+        raise ResumeConfigurationError(
+            "This output directory contains an all-split collection suite. "
+            "Use collect --all-splits, choose the matching split subdirectory, "
+            "or start in a new output directory."
+        )
     path = output / "run.json"
     if path.exists():
         saved = json.loads(path.read_text())

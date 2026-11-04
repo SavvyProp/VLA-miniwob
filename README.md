@@ -98,14 +98,28 @@ mixing in other training sets can invalidate a structural holdout.
 
 Set `OPENAI_API_KEY` in your shell. Alternatively, copy `.env.example` to `.env`,
 fill it in locally, and use `uv run --env-file .env`. The CLI does not load `.env`
-automatically. Start with a bounded pilot:
+automatically. Collect training demonstrations and held-out expert rollouts with
+one command, using a new output directory:
 
 ```bash
 uv run --env-file .env --frozen scriptwob collect \
-  configs/seed_suite.json runs/astra-train \
-  --max-episodes 5 --attempts 3 --max-total-steps 100
-uv run --frozen scriptwob report runs/astra-train
+  configs/seed_suite.json runs/astra-all \
+  --all-splits --attempts 3 --max-total-steps 10000
+uv run --frozen scriptwob report runs/astra-all
 ```
+
+The command processes train, dev, then test into `runs/astra-all/train`,
+`runs/astra-all/dev`, and `runs/astra-all/test`. The root `report.json` combines
+progress and refreshes between splits; each split's own `report.json` refreshes
+after every attempt. Training allows up to three
+attempts per task, stopping after success; dev/test allow exactly one attempt.
+Empty splits are explicitly reported as skipped. Use only the `train` directory
+for fine-tuning or export. Dev/test expert rollouts measure the teacher; SeeClick
+evaluation executes those held-out tasks itself.
+
+Add `--fresh` to create a unique output root on every invocation. The printed
+root replaces `runs/astra-all` in later commands: train from `<printed-root>/train`
+and read held-out results in `<printed-root>/dev` and `<printed-root>/test`.
 
 The default is `gpt-6-astra`, medium reasoning effort, using OpenAI
 [Responses structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
@@ -114,13 +128,23 @@ It returns normalized coordinates; Chrome executes the click before the next
 request. No DOM, private program, next-action target, reward, or correctness
 annotation reaches the teacher. Model reasoning is not a training target.
 
-`--max-episodes` selects the first N **training instances**, including previously
-attempted ones. Omit it for the entire training split. `--attempts` is the total
-attempt cap per instance. `--max-total-steps` bounds new model requests in this
-invocation, including failures; default 10,000. SDK transport retries are disabled
-by default. These are request limits, not dollar limits.
+With `--all-splits`, `--max-episodes N` selects the first N instances **per split**,
+including previously attempted ones. Omit it to select every instance. The
+`--max-total-steps` budget is shared across all three splits and bounds new model
+requests in this invocation, including failures; default 10,000. If it runs out,
+later tasks or entire splits can remain unattempted. SDK transport retries are
+disabled by default. These are request limits, not dollar limits.
 
-To expand the pilot to all training tasks:
+Without `--all-splits`, collection still targets only train. For an optional,
+bounded training pilot:
+
+```bash
+uv run --env-file .env --frozen scriptwob collect \
+  configs/seed_suite.json runs/astra-train \
+  --max-episodes 5 --attempts 3 --max-total-steps 100
+```
+
+To expand that pilot to all training tasks:
 
 ```bash
 uv run --env-file .env --frozen scriptwob collect \
@@ -132,19 +156,21 @@ To start from the beginning, add `--fresh`:
 
 ```bash
 uv run --env-file .env --frozen scriptwob collect \
-  configs/seed_suite.json runs/astra-train \
-  --fresh --attempts 3 --max-total-steps 10000
+  configs/seed_suite.json runs/astra-all \
+  --all-splits --fresh --attempts 3 --max-total-steps 10000
 ```
 
 `--fresh` creates a uniquely named sibling directory such as
-`runs/astra-train-20261103T120000Z-abcd1234`, leaving any existing run untouched.
+`runs/astra-all-20261103T120000Z-abcd1234`, leaving any existing run untouched.
 The actual path is printed at startup and saved as `output_dir` in `report.json`.
-Use that path for subsequent report, export, and training commands. Each invocation
-with `--fresh` starts over; it also works with `evaluate` and `evaluate-seeclick`.
+For `--all-splits`, it creates one fresh root containing all three splits.
+Use that root for reporting and its `train` subdirectory for export and training.
+Each invocation with `--fresh` starts over; it also works with `evaluate` and
+`evaluate-seeclick`.
 A new, unused output path starts from the beginning without needing this flag.
 
-Without `--fresh`, repeating a command resumes and skips successes. Increase `--max-episodes` and
-`--attempts` as needed; the request budget can change between invocations. An
+Without `--fresh`, repeating a command resumes and skips successes. Increase
+`--max-episodes` and `--attempts` as needed; the request budget can change between invocations. An
 attempt interrupted by a budget limit or crash is retained as unsuccessful; its
 next retry starts afresh. A changed manifest, policy/model/prompt, implementation,
 or headless setting requires a new run directory. Limit changes are recorded.
@@ -158,9 +184,12 @@ not mean every task has an accepted demonstration.
 ## Export for fine-tuning
 
 ```bash
-uv run --frozen scriptwob export runs/astra-train exports/messages
-uv run --frozen scriptwob export runs/astra-train exports/seeclick --format seeclick
+uv run --frozen scriptwob export runs/astra-all/train exports/messages
+uv run --frozen scriptwob export runs/astra-all/train exports/seeclick --format seeclick
 ```
+
+These paths use the combined collection above. Substitute the printed root if
+you used `--fresh`; for a train-only collection, pass its output directory directly.
 
 Each accepted trajectory produces one example per executed click, including Done.
 The exporter verifies manifest identity, supervision, transition continuity, and
@@ -204,7 +233,7 @@ Qwen-VL dependencies out of the benchmark environment:
 uv sync --project integrations/seeclick --extra cuda --frozen
 
 uv run --project integrations/seeclick --extra cuda --frozen \
-  scriptwob train-seeclick runs/astra-train runs/seeclick \
+  scriptwob train-seeclick runs/astra-all/train runs/seeclick \
   --config configs/seeclick_3090.json
 
 uv run --project integrations/seeclick --extra cuda --frozen \
@@ -255,7 +284,7 @@ Use a new directory for a new evaluation. Plugins are trusted code, not sandboxe
 ## Artifacts and verification
 
 ```text
-runs/astra-train/
+runs/astra-all/train/        # dev/ and test/ have the same rollout structure
   run.json                  # fingerprint and limit history
   manifest.json             # private frozen programs and worlds
   report.json               # coverage, first-attempt/retry metrics, usage

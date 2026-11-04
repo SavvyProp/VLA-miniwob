@@ -9,6 +9,25 @@ from scriptwob.collection import run
 from scriptwob.export import export_dataset
 from scriptwob.generation import generate_manifest
 from scriptwob.policies import OraclePolicy
+from scriptwob.suite import collect_suite
+
+
+@pytest.mark.browser
+def test_all_splits_collection_in_real_browser(tmp_path):
+    manifest = generate_manifest(train=1, dev=1, test=1, levels=[0], seed=72)
+    root = tmp_path / "all-data"
+    report = collect_suite(manifest, root, OraclePolicy(), attempts=2, max_total_steps=100)
+    assert report["stop_reason"] == "complete"
+    assert report["successful_episodes"] == 3
+    assert report["accepted_episodes"] == 1
+    assert report["new_predict_calls"] == sum(
+        episode.complexity.reference_actions for episode in manifest.episodes
+    )
+    export = export_dataset(root / "train", tmp_path / "training", allow_oracle=True)
+    assert export["episodes"] == 1
+    for split in ("dev", "test"):
+        with pytest.raises(ValueError, match="train"):
+            export_dataset(root / split, tmp_path / split, allow_oracle=True)
 
 
 @pytest.mark.browser

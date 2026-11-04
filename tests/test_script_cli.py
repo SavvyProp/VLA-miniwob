@@ -9,6 +9,7 @@ from scriptwob import cli
 from scriptwob.cli import app
 from scriptwob.collection import ResumeConfigurationError
 from scriptwob.collection import run as collection_run
+from scriptwob.export import export_dataset
 from scriptwob.generation import FAMILIES, generate_manifest, read_manifest, write_manifest
 
 runner = CliRunner()
@@ -137,3 +138,53 @@ def test_rollout_resume_configuration_error_is_a_clean_cli_error(tmp_path, monke
     assert "Resume configuration differs: manifest_digest" in result.stderr
     assert "Traceback" not in result.output
     assert not output.exists()
+
+
+def test_all_splits_cli_collects_and_preserves_training_boundary(tmp_path, monkeypatch):
+    from scriptwob import suite
+
+    manifest_path = tmp_path / "tasks.json"
+    manifest = generate_manifest(train=2, dev=1, test=1, seed=77)
+    write_manifest(manifest_path, manifest)
+    original = tmp_path / "all-data"
+    original.mkdir()
+    sentinel = original / "run.json"
+    sentinel.write_text("legacy run\n")
+    collect_suite = suite.collect_suite
+    policy = Policy()
+
+    def run_suite(*args, **kwargs):
+        return collect_suite(*args, env_factory=FakeEnvironment, **kwargs)
+
+    monkeypatch.setattr(FakeEnvironment, "fail", False)
+    monkeypatch.setattr(suite, "collect_suite", run_suite)
+    monkeypatch.setattr(cli, "_policy", lambda *args: policy)
+    result = runner.invoke(app, [
+        "collect", str(manifest_path), str(original), "--all-splits", "--fresh",
+        "--attempts", "3", "--max-total-steps", "20",
+    ])
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.stdout)
+    root = Path(report["output_dir"])
+    assert root != original and root.parent == original.parent
+    assert f"Fresh run directory: {root}" in result.stderr
+    assert sentinel.read_text() == "legacy run\n"
+    assert report["stop_reason"] == "complete"
+    assert report["new_predict_calls"] == policy.total_calls == 8
+    assert json.loads((root / "report.json").read_text()) == report
+    for split, count in (("train", 2), ("dev", 1), ("test", 1)):
+        directory = root / split
+        metadata = json.loads((directory / "run.json").read_text())
+        assert metadata["config"]["split"] == split
+        assert metadata["config"]["mode"] == ("collect" if split == "train" else "evaluate")
+        assert metadata["limits"]["attempts"] == (3 if split == "train" else 1)
+        verdicts = list((directory / "attempts").glob("*/private.json"))
+        assert len(verdicts) == count
+        assert all(json.loads(path.read_text())["accepted"] == (split == "train")
+                   for path in verdicts)
+
+    exported = export_dataset(root / "train", tmp_path / "training", format="seeclick")
+    assert exported["episodes"] == 2
+    for split in ("dev", "test"):
+        with pytest.raises(ValueError, match="train"):
+            export_dataset(root / split, tmp_path / f"export-{split}")
