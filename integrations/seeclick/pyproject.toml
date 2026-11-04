@@ -1,0 +1,52 @@
+[project]
+name = "scriptwob-seeclick-runtime"
+version = "0.1.0"
+description = "Isolated original SeeClick/Qwen-VL training and evaluation runtime"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "scriptwob",
+  "transformers==4.37.2",
+  "peft==0.10.0",
+  "accelerate==0.27.2",
+  "numpy==1.26.4",
+  "tiktoken==0.7.0",
+  "einops==0.8.0",
+  "transformers-stream-generator==0.0.5",
+  "matplotlib==3.9.4",
+  "safetensors==0.5.3",
+  "torch==2.5.1",
+  "torchvision==0.20.1",
+]
+
+[project.optional-dependencies]
+cuda = ["torch==2.5.1", "torchvision==0.20.1", "bitsandbytes==0.45.5"]
+cpu = ["torch==2.5.1", "torchvision==0.20.1"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.9"]
+
+[tool.uv]
+package = false
+conflicts = [[{ extra = "cpu" }, { extra = "cuda" }]]
+
+[tool.uv.sources]
+scriptwob = { path = "../..", editable = true }
+miniwob = { git = "https://github.com/Farama-Foundation/miniwob-plusplus", rev = "33c3b4ddef8c6eb67c57a29663d844b1eda7e614" }
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu124", extra = "cuda" },
+]
+torchvision = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu124", extra = "cuda" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true

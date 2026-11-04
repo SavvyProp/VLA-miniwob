@@ -1,189 +1,276 @@
-# VLA MiniWoB benchmark
+# scriptWoB
 
-An initial implementation of the supplied **CompWoB / MiniWoB++ / TinyVLA-B
-research design v1.1**. Uses uv, pinned native MiniWoB++ browser tasks, numerical
-mouse actions, a private strict-order evaluator, and GPT-6 Astra demonstrations.
+A generated GUI benchmark for executing natural-language procedures: sequences,
+conditionals, counted repetition, while/until loops, iteration over records, and
+nested control flow. A policy reads the procedure and screenshot, then predicts
+**one click at a time**. A private interpreter checks execution order, branches,
+iteration counts, and stopping.
 
-The working pilot includes 7 constituent controls and 6 compositions with 2–7
-components, forward/reversed **execution orders**, equivalent reverse-clause
-wording, and paired UIs. Every family/order/wording is present in each split.
-`configs/pilot.json` freezes 114 training, 38 development, and 38 evaluation
-instances. These are task instances, not collected demonstrations.
+This repository provides task generation, a Chrome environment, frontier-expert
+collection, SeeClick fine-tuning, checkpoint evaluation, and portable exports. It replaces the earlier
+TinyVLA benchmark; existing run directories are not migrated.
 
-This is an **adapted CompWoB-derived pilot**, not a reproduction of the original
-50-task leaderboard. The compositions reuse unchanged native MiniWoB constituent
-pages in independent panels. Layout, order semantics, completion handling, and
-procedure assembly are explicit adaptations. Typing, dragging, scrolling,
-page-transition tasks, and 8-component compositions are outside this release.
+The implementation reuses pinned [MiniWoB++](https://github.com/Farama-Foundation/miniwob-plusplus)
+browser infrastructure and core assets. Script pages and grammar are new: these
+are custom MiniWoB++ tasks, not its unchanged official task suite or leaderboard.
+No pretrained weights or GPU libraries are required for collection.
 
-## Setup and first run
+## Tasks and difficulty
+
+There are **22 families** across six structural levels:
+
+| Level | Structure | Example |
+| --- | --- | --- |
+| 0 | Atomic action | Press Maple, then Done. |
+| 1 | Sequence | Press Maple, toggle Cedar, then Done. |
+| 2 | Conditional | If Cedar is checked, press Maple; otherwise press Amber. |
+| 3 | Repetition and stopping | Increase a counter while below 4; advance until the current record is red. |
+| 4 | Branches with loops | For each record, approve if red; otherwise reject; then advance. |
+| 5 | Nested control flow | While a counter is below 3, repeat a conditional twice, then increase the counter. |
+
+Controls include buttons, checkboxes, counters, status displays, and record queues.
+Future record details are revealed by Next. Current records, visited markers, counters, a
+neutral action count, and literal click history support progress tracking. There
+are no explicit recall/delayed-memory families; this does not imply every procedure
+is solvable from a single screenshot without its action history.
+
+The generator samples a constrained program grammar and renders unambiguous
+language with bracketed blocks. It varies composition, labels, values, predicates,
+repetitions, queue contents, and layout. Every instance must pass its reference
+executor. The frontier model supplies demonstrations; free-form LLM paraphrasing
+of instructions is not enabled.
+
+Levels describe structure, not guaranteed empirical difficulty. Each instance
+also records program size, nesting depths, predicate complexity, reference click
+count, executed branches/loops, and scene size. Zero-iteration cases are intentional.
+Compare performance within action-length bands as well as by level. See the
+[exact protocol](docs/protocol.md).
+
+## Install and inspect
 
 Install [uv](https://docs.astral.sh/uv/) and Chrome/Chromium, then:
 
 ```bash
 uv sync --frozen
-uv run --frozen vla-benchmark tasks
-uv run --frozen vla-benchmark smoke
+uv run --frozen scriptwob doctor
+uv run --frozen scriptwob catalog
+uv run --frozen scriptwob inspect configs/seed_suite.json
+uv run --frozen scriptwob validate configs/seed_suite.json
+uv run --frozen scriptwob preview configs/seed_suite.json runs/preview --index 4
+```
+
+`preview` writes `screen.png`, `instruction.txt`, and public metadata. Add `--headed`
+to show Chrome. Selenium Manager can obtain a matching ChromeDriver. For a managed
+installation set both `MINIWOB_CHROME_BINARY` and `MINIWOB_CHROMEDRIVER`; use
+`SE_CACHE_PATH` for a writable driver cache. The environment serves local assets
+on a temporary loopback-only HTTP port. Linux is tested; collection uses POSIX locks.
+
+Checked-in starter manifests contain **task instances**, not demonstrations:
+
+| Manifest | Train | Dev | Test | Purpose |
+| --- | ---: | ---: | ---: | --- |
+| `configs/seed_suite.json` | 132 | 36 | 36 | All six levels, new task instances |
+| `configs/structure_suite.json` | 120 | 24 | 24 | Levels 2–5, disjoint normalized structures |
+
+Generate a larger manifest before collecting:
+
+```bash
+uv run --frozen scriptwob generate configs/train_large.json \
+  --train 6000 --dev 600 --test 600 --seed 2026
+uv run --frozen scriptwob generate configs/structure_large.json \
+  --train 3000 --dev 300 --test 300 --split-strategy structure --seed 2026
+```
+
+Counts are totals per split, balanced across selected levels. `--levels 2,3,4,5`
+restricts generation. A seed split groups exact tasks into stable split buckets,
+so different seeds cannot put an identical instruction/world/layout in train and
+test. Repeated tasks within a split remain possible, particularly for atomic
+families; `inspect` reports unique task counts. A structure
+split holds out normalized AST shapes, ignoring labels, targets, literal values,
+and repeat counts. It tests composition within this grammar, not novel language or
+unlimited semantic diversity. A structural split can hold out an entire family or
+operator; it is not a controlled test of new combinations of only trained operators.
+Levels 0–1 are excluded from structure splitting
+because shape diversity is small. Train on the **same manifest's training split**;
+mixing in other training sets can invalidate a structural holdout.
+
+## Collect frontier demonstrations
+
+Set `OPENAI_API_KEY` in your shell. Alternatively, copy `.env.example` to `.env`,
+fill it in locally, and use `uv run --env-file .env`. The CLI does not load `.env`
+automatically. Start with a bounded pilot:
+
+```bash
+uv run --env-file .env --frozen scriptwob collect \
+  configs/seed_suite.json runs/astra-train \
+  --max-episodes 5 --attempts 3 --max-total-steps 100
+uv run --frozen scriptwob report runs/astra-train
+```
+
+The default is `gpt-6-astra`, medium reasoning effort, using OpenAI
+[Responses structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+Each request includes the full procedure, current PNG, and literal past clicks.
+It returns normalized coordinates; Chrome executes the click before the next
+request. No DOM, private program, next-action target, reward, or correctness
+annotation reaches the teacher. Model reasoning is not a training target.
+
+`--max-episodes` selects the first N **training instances**, including previously
+attempted ones. Omit it for the entire training split. `--attempts` is the total
+attempt cap per instance. `--max-total-steps` bounds new model requests in this
+invocation, including failures; default 10,000. SDK transport retries are disabled
+by default. These are request limits, not dollar limits.
+
+To expand the pilot to all training tasks:
+
+```bash
+uv run --env-file .env --frozen scriptwob collect \
+  configs/seed_suite.json runs/astra-train \
+  --attempts 3 --max-total-steps 10000
+```
+
+Repeating a command resumes and skips successes. Increase `--max-episodes` and
+`--attempts` as needed; the request budget can change between invocations. An
+attempt interrupted by a budget limit or crash is retained as unsuccessful; its
+next retry starts afresh. A changed manifest, policy/model/prompt, implementation,
+or headless setting requires a new run directory. Limit changes are recorded.
+Provider/infrastructure errors stop collection rather than consuming every task.
+
+Only successful training trajectories are accepted. Failures remain auditable.
+Reports distinguish first-attempt performance, success after retries, coverage,
+infrastructure failures, and known provider usage. Reaching the retry cap does
+not mean every task has an accepted demonstration.
+
+## Export for fine-tuning
+
+```bash
+uv run --frozen scriptwob export runs/astra-train exports/messages
+uv run --frozen scriptwob export runs/astra-train exports/seeclick --format seeclick
+```
+
+Each accepted trajectory produces one example per executed click, including Done.
+The exporter verifies manifest identity, supervision, transition continuity, and
+screenshot hashes. Only pre-action images, full instructions, literal history,
+and next executed clicks enter model samples. Dev/test runs cannot become training
+exports. No ASTs, oracle targets, future screenshots, or evaluator verdicts enter
+the model messages.
+
+- **`messages`**: portable `train.jsonl` with relative image paths, user/assistant
+  messages, and `{"x": ..., "y": ...}` targets. Adapt it to the chosen image
+  processor/chat template and mask the prompt from the training loss.
+- **`seeclick`**: `train.json` in the SeeClick/Qwen-VL conversation format, `<img>`
+  paths, and `{"action_type": 4, "click_point": [x, y]}` targets. Image paths are
+  absolute for its loader; re-export after moving the dataset.
+
+The SeeClick export follows its [conversation loader](https://github.com/njucckevin/SeeClick/blob/main/finetune/finetune.py)
+and [MiniWoB preprocessing](https://github.com/njucckevin/SeeClick/blob/main/agent_tasks/miniwob_process.py).
+It uses valid JSON arrays and full history, so prompting is adapted rather than an
+exact reproduction. The SeeClick trainer below uses these same prompts and masks
+all instruction/history/image tokens from the loss. It rejects examples that exceed
+the context window, including room for the next action. Check processed-image
+legibility too: smaller image resolutions can make GUI text hard to read,
+confounding visual grounding with procedural reasoning.
+
+Exports include copied `images/`, `dataset.json` with provenance and counts, and
+`episodes.json` with episode IDs. The source run remains the audit trail.
+
+## Fine-tune and evaluate SeeClick
+
+Training starts from the pretrained **`cckevinn/SeeClick`** GUI-grounding checkpoint,
+using pinned original Qwen-VL code and tokenizer. The default configuration targets
+one RTX 3090: 4-bit NF4 language weights, BF16 compute, language-only LoRA, frozen
+vision encoder, batch size 1, gradient accumulation 16, and 2,048 tokens. It is a
+starting configuration; full-checkpoint GPU memory use still needs verification
+on your machine.
+
+Run from the repository root. The separate uv environment keeps the older
+Qwen-VL dependencies out of the benchmark environment:
+
+```bash
+uv sync --project integrations/seeclick --extra cuda --frozen
+
+uv run --project integrations/seeclick --extra cuda --frozen \
+  scriptwob train-seeclick runs/astra-train runs/seeclick \
+  --config configs/seeclick_3090.json
+
+uv run --project integrations/seeclick --extra cuda --frozen \
+  scriptwob evaluate-seeclick runs/seeclick configs/seed_suite.json \
+  runs/seeclick-dev --split dev
+```
+
+The training command automatically exports accepted training demonstrations into
+`runs/seeclick/dataset/`. You can instead pass an existing SeeClick export directory
+as its first argument. Downloads require about **19.3 GB for the original model**,
+even with 4-bit loading; allow at least 30 GB free for model/runtime/checkpoint caches.
+The CUDA extra uses PyTorch CUDA 12.4 wheels and needs a compatible NVIDIA driver.
+
+Add `--resume` to continue an interrupted run with its optimizer/RNG state. Add
+`--max-steps 20` for a short initial run; later resume with a larger positive
+`--max-steps` target. Use `base` in place of `runs/seeclick` to evaluate the original
+pretrained SeeClick without your adapter. Both evaluations use greedy single-click
+predictions and one attempt per dev/test episode.
+
+Final adapters are in `runs/seeclick/adapter/`; resumable checkpoints are under
+`runs/seeclick/checkpoints/`. Evaluation results are in the selected output's
+`report.json`, with screenshots and action traces under `attempts/`.
+See [SeeClick setup, preflight, resume, and limitations](docs/seeclick.md).
+
+## Evaluate a reference or student
+
+```bash
+uv run --env-file .env --frozen scriptwob evaluate \
+  configs/seed_suite.json runs/astra-dev --split dev --max-total-steps 1000
+```
+
+Student plugins implement the [Policy interface](src/scriptwob/contracts.py):
+`reset(seed)`, `predict(Observation) -> ClickAction`, and `provenance() -> dict`.
+Observations contain a PIL RGB image, instruction, and literal executed-action
+history. Use `format_context()` to reproduce exported context, and convert model
+output into `ClickAction(x=..., y=...)`. Include checkpoint/config hashes in provenance.
+
+```bash
+uv run --frozen scriptwob evaluate configs/seed_suite.json runs/student-test \
+  --split test --policy-factory my_policy:create \
+  --policy-config configs/my_student.json
+```
+
+The importable factory receives JSON configuration as keyword arguments. Evaluation
+permits one attempt per episode; training retries are never evaluation scores.
+Use a new directory for a new evaluation. Plugins are trusted code, not sandboxed.
+
+## Artifacts and verification
+
+```text
+runs/astra-train/
+  run.json                  # fingerprint and limit history
+  manifest.json             # private frozen programs and worlds
+  report.json               # coverage, first-attempt/retry metrics, usage
+  attempts/<id-hash>-001/
+    episode.json            # public instruction and rollout metadata
+    transitions.jsonl       # requested/executed clicks and PNG hashes
+    000000.png ...          # observations before/after clicks
+    attempt.json            # attempt identity
+    private.json            # verdict, reason, evaluator state
+    provider_calls.json     # response IDs, model identity, usage
+    progress.json           # crash recovery state
+```
+
+Keep `manifest.json` and `private.json` out of model inputs.
+
+```bash
 uv run --frozen pytest
 uv run --frozen pytest --run-browser
+uv run --frozen ruff check src tests
 ```
 
-Selenium Manager can download the matching ChromeDriver on first use. For a
-managed/offline installation, set **both** `MINIWOB_CHROME_BINARY` and
-`MINIWOB_CHROMEDRIVER`. `SE_CACHE_PATH` can direct Selenium's cache to a writable
-directory. The environment serves installed MiniWoB assets on a loopback-only
-ephemeral HTTP port. Smoke screenshots are written to `runs/smoke/`.
-
-Create another immutable manifest if you want a larger dataset:
+For an end-to-end check without an API key:
 
 ```bash
-uv run --frozen vla-benchmark manifest configs/experiment.json \
-  --train 100 --dev 10 --evaluation 20 --seed 2026
+uv run --frozen scriptwob collect configs/seed_suite.json runs/oracle-smoke \
+  --teacher oracle --max-episodes 6 --attempts 1 --max-total-steps 100
+uv run --frozen scriptwob export runs/oracle-smoke exports/oracle-smoke --allow-oracle
 ```
 
-Counts are **per task/order/wording cell**. Repeated `--task TASK` options select
-families. Values/internal native layout and the panel permutation have separate
-seeds; paired order/wording variants share both. Splits have disjoint seeds.
-
-## Generate examples with GPT-6 Astra
-
-Set `OPENAI_API_KEY` in your shell; `.env` is not loaded automatically. Then:
-
-```bash
-uv run --frozen vla-benchmark collect configs/pilot.json runs/astra-train \
-  --max-episodes 10 --attempts 2
-uv run --frozen vla-benchmark report runs/astra-train
-uv run --frozen vla-benchmark export runs/astra-train exports/train --horizon 16
-```
-
-The default model is exactly `gpt-6-astra`, using the Responses API, high-detail
-PNG image inputs, and a structured numerical action schema. A call requests one
-primitive, executes it in Chrome, and observes again. It does not invent example
-trajectories without running them. See the official [model documentation](https://developers.openai.com/api/docs/models/gpt-6-astra)
-and [Structured Outputs documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
-
-`--max-episodes` bounds **new attempts per invocation**, including failures;
-`--attempts` bounds total collection attempts per instance, including its first
-attempt. With the default 64-step
-budget this is at most 640 logical action requests for 10 attempts, plus SDK
-transport retries. API calls incur usage charges. Repeating the same command
-resumes without overwriting existing attempts. You can increase `--attempts` on
-resume: accepted instances are skipped, and exhausted failures become eligible
-for the additional attempts. The increase is recorded in `run.json` under
-`resume_history`. Continue using that new limit on later invocations; decreasing
-it is rejected. Changing the manifest, policy, or runtime requires a new run
-directory. Source changes also require a new directory unless an exact reviewed
-compatibility entry exists; this resume fix includes one for the initial release.
-Only validated success is exported; rejected and interrupted attempts remain auditable.
-
-To process the full 114-instance pilot with up to three attempts per instance:
-
-```bash
-uv run --frozen vla-benchmark collect configs/pilot.json runs/astra-train \
-  --max-episodes 342 --attempts 3
-```
-
-The command stops when it has processed all eligible instances, even if fewer
-than 342 new attempts are needed. Existing attempts count toward each instance's
-limit. A run that exhausts three attempts on an instance may still have a shortfall.
-
-Collection is restricted to training instances. For a separate, single-attempt
-frontier reference or development check:
-
-```bash
-uv run --frozen vla-benchmark evaluate configs/pilot.json runs/astra-dev \
-  --policy astra --split dev --max-episodes 38
-uv run --frozen vla-benchmark evaluate configs/pilot.json runs/astra-eval \
-  --policy astra --max-episodes 38
-uv run --frozen vla-benchmark export runs/astra-dev exports/dev --split dev \
-  --normalization exports/train/normalization.json
-```
-
-All model attempts count for evaluation, including invalid actions and refusals.
-Infrastructure failures are retained, counted separately, and excluded from the
-success denominator. Reports flag incomplete coverage and withhold the complete
-benchmark score until every declared evaluation instance has a usable outcome.
-Collection acceptance rates are never reported as zero-shot benchmark scores.
-
-## Trainable data and policy integration
-
-```python
-from vla_miniwob.dataset import ChunkDataset
-
-dataset = ChunkDataset("exports/train", horizon=16)
-sample = dataset[0]
-# image: RGB uint8 H×W×3; raw_lang: full procedure + past literal actions
-# state: float32 [3]; action: float32 [16,3]; is_pad: bool [16]
-```
-
-HDF5 exports contain raw executed actions, cursor/button state, current RGB
-screenshots, the procedure, and per-timestep procedure/history text. Chunks are
-built within a single episode; padding is masked. Only successful **training**
-episodes fit normalization. Evaluator goals, DOM, order ledger, rewards, and
-future screenshots are excluded from policy samples and HDF5 files.
-
-TinyVLA-B training and checkpoint evaluation use a separate pinned uv runtime:
-
-```bash
-bash scripts/setup_tinyvla.sh cuda
-uv run --project integrations/tinyvla --frozen --extra cuda \
-  vla-benchmark train-tinyvla runs/astra-train runs/tinyvla-b --max-steps 2000
-uv run --project integrations/tinyvla --frozen --extra cuda \
-  vla-benchmark evaluate-tinyvla runs/tinyvla-b configs/pilot.json \
-  runs/tinyvla-b-eval --split eval
-```
-
-Training automatically exports accepted demonstrations, checks full context,
-records vision previews, trains native diffusion/LoRA/projector parameters and
-saves resumable checkpoints. Defaults target a single RTX 3090. Add `--resume`
-with the same settings to continue training. Evaluation runs every instance in
-the selected split by default and writes the existing benchmark reports.
-See [training, resume and evaluation details](docs/tinyvla.md) and the
-[configuration](configs/tinyvla_b.json). Native model and training mechanics are
-CPU-tested; full pretrained GPU training, memory fit, and GUI scores remain to
-be measured on your machine.
-
-Other VLA models implement the small [Policy protocol](src/vla_miniwob/contracts.py):
-`reset(seed)`, `predict(observation) -> H×3`, and `provenance()`. Predictions must
-be **denormalized** numerical GUI actions. Return one sampled chunk; the harness
-executes the fixed prefix, default K=1, then observes again.
-
-```bash
-uv run --frozen vla-benchmark evaluate configs/pilot.json runs/student \
-  --policy my_package.policy:create --policy-config configs/my_model.json
-```
-
-The user-supplied factory receives that JSON as keyword arguments. Keep policies
-in importable packages in the active uv environment. Include checkpoint hashes,
-training configuration, sampler settings, and `prediction_horizon` in provenance.
-The `random` policy is an execution control, not a pretrained VLA baseline.
-
-## What is recorded and validated
-
-- `run.json`: model/prompt/settings, source/runtime fingerprints, H/K, and protocol.
-- `manifest.json`: frozen instance seeds, families, orders, and wording conditions.
-- `episodes/*/episode.json`, PNGs, `transitions.jsonl`: procedure, pre-action and
-  settled observations, requested and executed primitives, and execution feedback.
-- `episodes/*/attempt.json`, `private.json`: identity, provider usage/response IDs,
-  semantic events, native rewards, first order violation, and rejection reason.
-- `report.json`: coverage shortfalls, accepted data counts, per-task/complexity
-  success, final-state versus order-valid success, and clustered uncertainty when
-  enough independent UI instances are available.
-
-The model sees only its full procedure, current screenshot, cursor/button state,
-and literal past actions/feedback. No correct-next-step information is supplied.
-Native task completion is absorbing; premature meaningful interaction with a
-later component permanently invalidates chronology. Checkbox partial credit is
-not full success. A successful final state cannot erase an earlier violation.
-
-Saved primitives can be replayed and revalidated:
-
-```bash
-uv run --frozen vla-benchmark replay runs/astra-train/episodes/EPISODE \
-  configs/pilot.json runs/replay-check
-```
-
-See [the protocol](docs/protocol.md) for precise semantics and known limitations,
-and [upstream sources](configs/upstream_sources.json) for revisions and licenses.
-Live Astra collection requires your API key; local fixture tests use clearly
-labeled test policies and are not teacher demonstrations or benchmark results.
+Oracle trajectories use the private interpreter and DOM, and are labeled
+`privileged_oracle`. They are reference supervision, not frontier demonstrations;
+export requires the explicit flag. Mock API and oracle browser tests do not
+establish frontier-model accuracy.

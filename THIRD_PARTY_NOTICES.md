@@ -1,18 +1,25 @@
-# Third-party code and designs
+# Third-party code and formats
 
-- **MiniWoB++**, Farama Foundation and contributors, MIT License.
-  Used as a pinned dependency; its package supplies native HTML/JavaScript assets,
-  browser execution, environment code, and screenshots. The dependency retains
-  its license: https://github.com/Farama-Foundation/miniwob-plusplus/blob/33c3b4ddef8c6eb67c57a29663d844b1eda7e614/LICENSE
-- **CompWoB**, Google Research authors, Apache License 2.0.
-  Selected composition definitions inform the task manifest. The legacy task
-  files are not vendored or represented as unchanged implementations here:
-  https://github.com/google-research/google-research/tree/83f1e7b59e762648c953de751d31f75720683622/compositional_rl/compwob
-- **TinyVLA**, its authors, MIT License. Its source was audited for configuration
-  and data/processor compatibility. The optional bridge imports the user's
-  separately installed upstream implementation:
-  https://github.com/liyaxuanliyaxuan/TinyVLA/tree/94f441827b45e4f76316ef6a0ae443736dc93a5d
+- **MiniWoB++**, Farama Foundation and contributors, MIT License. Pinned at
+  `33c3b4ddef8c6eb67c57a29663d844b1eda7e614`. Supplies Selenium browser lifecycle,
+  clicks, screenshots, and core HTML/JavaScript assets. License retained upstream:
+  https://github.com/Farama-Foundation/miniwob-plusplus/blob/33c3b4ddef8c6eb67c57a29663d844b1eda7e614/LICENSE
+- **SeeClick**, its authors, Apache License 2.0 for the repository code. Training
+  and evaluation load its pretrained checkpoint and pinned original Qwen-VL custom
+  implementation from Hugging Face. No model implementation or weights are vendored.
+  The export follows its conversation schema and MiniWoB click convention.
+  Loader: https://github.com/njucckevin/SeeClick/blob/main/finetune/finetune.py
+  Preprocessing: https://github.com/njucckevin/SeeClick/blob/main/agent_tasks/miniwob_process.py
+- **Qwen-VL**, Alibaba Cloud and contributors. Pinned tokenizer/model custom code
+  and font are loaded as runtime dependencies. Consult the model repository's terms:
+  https://huggingface.co/Qwen/Qwen-VL-Chat
+- **Transformers, PEFT, Accelerate**, Hugging Face and contributors, Apache License
+  2.0. Used for model loading, LoRA, training, and checkpoints. **PyTorch/torchvision**
+  and **bitsandbytes** are optional training-runtime dependencies with their upstream
+  licenses retained. All package versions are frozen in the integration lockfile.
+- **OpenAI Python SDK**, Apache License 2.0. Used for Responses requests with
+  structured actions: https://github.com/openai/openai-python
 
-No pretrained model weights are redistributed. Check their model-card terms
-when downloading the pinned backbone. Complete revision metadata is in
-`configs/upstream_sources.json`.
+The scriptWoB grammar, interpreter, pages, and collection/export implementation are
+custom code. This is not an unchanged MiniWoB++/CompWoB reproduction. No pretrained
+model weights are redistributed; consult upstream model/data terms when using them.

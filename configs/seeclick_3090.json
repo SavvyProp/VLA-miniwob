@@ -1,0 +1,28 @@
+{
+  "model": {
+    "model_id": "cckevinn/SeeClick",
+    "model_revision": "b79618049920e209d15cda4d35004e32e8b485d9",
+    "tokenizer_id": "Qwen/Qwen-VL-Chat",
+    "tokenizer_revision": "f57cfbd358cb56b710d963669ad1bcfb44cdcdd8",
+    "quantization": "4bit",
+    "precision": "bf16",
+    "device": "cuda:0",
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "gradient_checkpointing": true
+  },
+  "max_length": 2048,
+  "epochs": 3.0,
+  "max_steps": -1,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 16,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.03,
+  "max_grad_norm": 1.0,
+  "save_steps": 100,
+  "save_total_limit": 2,
+  "logging_steps": 10,
+  "seed": 2026
+}

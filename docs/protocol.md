@@ -1,155 +1,119 @@
-# Pilot protocol: independent-panels-v1
+# scriptWoB v1 protocol
 
-This implements the initial environment, validation, collection, and data stages
-of the supplied research design v1.1 dated 31 October 2026. The PDF is design input;
-it does not imply an implementation, collected dataset, or experimental result.
+## Program semantics
 
-## Task adaptation and reuse
+The manifest contains typed program ASTs, initial worlds, layout seeds, canonical
+instructions, complexity vectors, splits, and action budgets. Generation is
+deterministic under the pinned implementation and seed. Provider sampling is not:
+rollout seeds are bookkeeping labels, not OpenAI sampling seeds.
 
-MiniWoB++ is pinned in `pyproject.toml` and `uv.lock`. Its Gymnasium environment,
-Chrome/Selenium primitives, screenshot code, task RNG, assets, and constituent
-goal functions are reused. The wrapper serves those installed assets unchanged.
-The seven constituent tasks are button, link, dialog, checkboxes, radio option,
-widget, and button sequence. Widget tasks require clicking even when the widget
-is a text input; this is not text entry.
+| Node | Meaning |
+| --- | --- |
+| `action` | One semantic control operation through one physical click. |
+| `sequence` | Execute children in order. |
+| `if` | Evaluate current state once and execute the selected branch. |
+| `repeat` | Execute the body exactly N times; zero executes nothing. |
+| `while` | Before each iteration, execute the body only if the predicate is true. |
+| `until` | Before each iteration, execute the body only if the predicate is false. |
+| `foreach` | Execute the body for each remaining queue record, then click Next. |
 
-The six composition definitions follow the named CompWoB source files listed in
-`FAMILIES` in `tasks.py`, pinned to the Google Research revision in
-`configs/upstream_sources.json`. We inspected the legacy HTML and integration
-instructions, then replaced the assembly with independent native-task panels.
-This changes the original shared page layout, distractors, reward wiring, and
-some linguistic phrasing. It allows genuine reversed semantic orders without
-revealing the next component by layout. It is not a drop-in port of the original
-CompWoB HTML or a result comparable to its 50-task leaderboard.
+While/until are pre-test loops and can execute zero times. Foreach includes a
+final Next after the last record; its body may not advance the same queue or
+iterate over it recursively. Done is required after the program finishes.
 
-All selected components are independent. The permitted order set is forward and
-reverse, or just forward for singleton tasks. `reverse_clauses` changes phrasing
-while preserving the selected semantic order. Orders are enumerated conditions,
-not sampled arbitrary permutations; the recorded order seed is an identity seed.
-The values seed also controls geometry internal to each unchanged native task.
-The separate layout seed only shuffles the outer panels. Stable SHA-256-derived
-seeds are independent of Python's process-randomized hash function.
+Predicates support typed comparisons, and/or/not; generated families use a
+restricted subset. Queue predicates inspect the current record. Current-record
+comparisons on an exhausted queue return false, including inequality; use the
+remaining count to test exhaustion. Counters stay within their bounds. Generation
+checks widget/operation types, executable actions, and reference termination.
 
-## Observation/action contract
+The first release is click-only: no typing, dragging, scrolling, navigation,
+clipboard, timers, stochastic transitions, or external sites. The viewport is
+1000×760 with deterministic card permutations and a small label vocabulary.
+This is controlled, finite diversity; more seeds do not create unlimited semantics
+or realistic websites.
 
-The screenshot is 720×540 RGB, device scale factor 1, top-left origin, no policy
-crop or resizing. Seven 160×210 task surfaces fit in a four-column grid.
-The screenshot shows each native subtask instruction and static panel labels.
-The complete procedure is additionally supplied as text at every decision.
-Panel labels and positions do not indicate progress. Policies never receive
-native DOM/fields, raw reward, event labels, the required-order array, or goals.
+## Observation and correctness
 
-The action `(x, y, c)` is finite, with x/y clipped to [0,1], mapped to
-`floor(x*(width-1)+0.5)` and `floor(y*(height-1)+0.5)`. `c >= 0.5` means one full
-left-button press/release after moving; otherwise move only. The button is
-released after every primitive. Consecutive clicks remain consecutive clicks.
-There is no nearest-target snapping, semantic repair, typing, or held button.
-The stored executed vector uses the actual quantized pixel location.
+The policy gets instruction, screenshot, and literal past clicks. Coordinates
+range from [0,1], top-left to bottom-right pixel, rounded from
+`x*(width-1), y*(height-1)`. Training targets reflect executed pixel coordinates.
+There is no target snapping, automatic correction, semantic action label, DOM,
+program counter, reward, or correctness annotation in model input.
 
-The 100 ms settling delay is fixed in the manifest. A primitive counts once,
-including its movement and press/release. The initial budget is 64 primitives;
-success on primitive 64 is allowed. Native wall-clock task timers are disabled
-so model/API latency does not consume a task deadline. Rendering/browser errors
-are infrastructure failures. This timer change is part of the adaptation.
+Button counts, counter values, checkboxes, queue position/remaining count, current
+record details, visited-record markers, a neutral action count, and recent physical events are
+visible. Future record details are hidden until Next. The instruction is text
+context outside the screenshot. Literal history describes what happened, not the
+next correct step. Explicit recall tasks are excluded, though history may still
+be needed for progress through nested/repeated instructions.
 
-State is normalized cursor x/y plus a released-button indicator. Feedback says
-only that execution occurred and whether coordinates were clipped. The history
-logs executed numerical actions and that feedback, in chronological order.
-No summaries, semantic progress, or oracle labels enter it. Full procedure and
-full history are retained; context overflow fails explicitly.
+Every click must match the next required semantic operation. Wrong branches,
+out-of-order controls, extra iterations, background/disabled clicks, premature
+Done, and budget exhaustion fail. Valid controls still show their physical effect
+on a semantically wrong click. A correct eventual final state cannot erase an
+order violation; no partial-credit score is awarded.
 
-## Goals, chronology, and corrections
+Only Python holds the program and interpreter. Browser payloads contain public
+state. Built-in model policies receive no browser objects; the privileged oracle
+deliberately uses them. Plugins run in-process and are trusted integrations, not
+security-isolated agents.
 
-Interactive-control clicks (including labels/widgets) generate a private progress
-event before native handlers execute. Movement and blank-background clicks are
-neutral. Partial work on a later component is already an order violation, even
-if it does not finish that component. The first violation remains in the ledger.
+## Complexity and splits
 
-A native terminal callback with raw reward exactly 1 completes a component.
-Positive fractional checkbox reward is failure, not completion. Native errors
-terminate the composition. Corrections are possible before native submission or
-termination, e.g. toggling a mistaken checkbox while still working in the current
-component. Completed components are absorbing: their handlers ignore subsequent
-clicks, without adding a progress badge or changing the layout. There is no
-reopening/undo of a completed component in this version.
+Levels classify structure, not guaranteed difficulty. Empty loops and short
+reference traces can occur at high levels. Each complexity vector records static
+node count, control/loop depth, predicate sites and expression size, operators,
+widget/item counts, reference clicks **including Done**, executed branch evaluations,
+and loop iterations. Evaluate by level and realized action length. To isolate
+control flow, match cohorts on length and visual complexity and report empty loops
+separately. Starter datasets are pilots, not evidence of training-data sufficiency.
 
-The composition terminates when every component completes or one fails. Its
-native aggregate reward is stored separately from constituent raw rewards and
-the strict verdict. Full success requires all goals, no order violation, valid
-termination within the primitive budget, and no policy/execution error. A
-misordered composition can have native aggregate reward 1 and benchmark success
-0. This behavior is tested in a real browser.
+Seed splitting groups exact task instances by a fingerprint of the instruction,
+effective card order, and full displayed world semantics (including future queue
+contents), ignoring internal IDs and seeds. Stable 60/20/20 hash buckets assign a
+task to one split, even across differently sized manifests. Within-split repeats
+remain possible because simple task families have finite diversity. Inspect reports
+their unique counts. Equivalent procedures or different future queue contents can
+still share an initial screenshot; this is not semantic-equivalence deduplication.
 
-## Collection and evaluation
+Structure splitting assigns normalized AST hashes to fixed train/dev/test buckets
+(60/20/20), then samples requested counts. Shapes retain operations, control flow,
+sequence arity, and predicate structure/types; they omit targets, labels, values,
+and repeat counts. This is a conservative syntactic holdout, not semantic
+equivalence detection. Entire families or operators can land outside training,
+so this is not a controlled compositional-only generalization experiment.
+Families need not be equally represented in every split.
+Mixing data from another split strategy can invalidate the holdout.
 
-The teacher takes the exact permitted policy observations and outputs structured
-mouse primitives through GPT-6 Astra. There are no macros to expand, hidden DOM
-assists, task demonstrations in the prompt, or oracle retries within a decision.
-Transport retry settings are recorded; provider-side sampling is not claimed to
-be seedable. Recorded rollout seeds are passed to student policies and label
-teacher attempts. Response model IDs and usage are retained when available;
-unreturned usage during provider errors cannot be reconstructed.
+## Collection and reporting
 
-Teacher H=1 is recorded separately from the H=16 training-chunk target. Student
-adapters declare their H in provenance. K is fixed by the manifest, initially 1.
-There is one sampled chunk per decision and no temporal averaging or private
-validator selection among candidate samples.
+Training collection permits retries and exports at most one success per episode.
+Evaluation permits exactly one attempt on dev/test. Reports distinguish first
+attempts from any success after retries, show coverage, and identify infrastructure
+and budget interruptions. Rates over attempted tasks are incomplete if selected
+tasks remain unattempted; publish coverage and failure counts alongside scores.
+Collection yield is not student evaluation accuracy.
 
-Collection retries an instance up to its recorded total attempt limit and accepts
-only complete valid trajectories. The limit may be increased on resume without
-repeating accepted instances or overwriting failures. `run.json` atomically records
-the previous/new limits, UTC change time, and number of already recorded attempts
-in `resume_history`. Increasing this budget changes the data-collection protocol;
-report the budget and its history with data yield. Decreases are rejected.
-All failures are retained. Evaluation attempts each
-declared instance once. Infrastructure failures are reported separately and
-excluded; model failures remain in the denominator. An interrupted attempt is
-retained rather than silently overwritten. Resume fingerprints include code,
-runtime, manifest, and policy. A packaged compatibility resource permits only
-explicitly reviewed source fingerprint pairs for collection; the initial
-retry-resume fix preserves the rollout implementation. Both source fingerprints
-are retained in `resume_history` when that migration is used. Unlisted source
-changes and changes to runtime, manifest, or policy still require a new run.
-Use one writer per run directory; concurrent
-collection/sharding is not implemented.
+Token totals aggregate available provider metadata. Interrupted/failed requests
+can have unknown usage, so totals may not reflect all billed usage. Request limits
+do not enforce a dollar budget. Refusals and invalid model outputs are retained.
 
-Reports average within order/wording cells, then equally across observed cells
-within a task, then equally across tasks. Complete benchmark scores require full
-planned coverage. Partial scores are labeled observed. Intervals resample task
-templates and then UI seed clusters, keeping paired variants together. Intervals
-are omitted when any task has fewer than two independent UI clusters. The small
-checked-in pilot is for integration, not precise scientific confidence intervals.
+Attempts record before/after PNGs, requested/executed clicks, hashes, public context,
+private verdicts, response IDs, usage, and error classes. Provider exception messages
+are not saved because they may contain credentials. Atomic directory commits and
+file locks prevent partial successes; interrupted attempts are retained as failed.
 
-## Data boundary
+Fingerprints bind manifest, implementation, teacher/prompt/settings, action contract,
+and browser mode. Larger episode/retry limits preserve existing data; changed
+behavior requires a new run directory. Chrome versions are recorded per attempt.
+The Python lockfile does not pin the system browser or promise identical pixels
+across platforms.
 
-Each primitive has its pre-action image/state, requested vector, decoded command,
-literal execution result, settled next image/state, and terminal flag. The latter
-observation is stored for analysis but excluded from the policy sample for that
-action. Evaluator/identity files are separate from public episode data.
-
-HDF5 contains only current policy inputs and raw executed numerical targets.
-`language_per_timestep` includes past actions only; `language_raw` is the original
-procedure. `sim=True` prevents upstream robotics loaders from shifting targets
-back one timestep. The supplied `ChunkDataset` is the supported loader: H targets
-stay within one episode, the terminal action is valid, and all later positions
-are padded/masked. Training-only empirical min/max maps actions to [-1,1];
-constant channels use physical [0,1] bounds. State uses training mean/std with a
-0.01 floor. Statistics are reused unchanged for dev/eval and inference.
-
-## Limits remaining before a research release
-
-- No live teacher data or fine-tuned policy is bundled. Tests include unit fixtures
-  and a privileged browser test oracle, explicitly excluded from policy baselines.
-- Native random layouts can overlap controls. The executor does not fix them.
-  Coverage and failure inspection must identify genuinely inaccessible instances
-  and freeze a handling policy before a reported collection run.
-- TinyVLA's image resizing may make a multi-panel screen unreadable. Audit the
-  actual backbone processor and visual-token budget before training; cropping,
-  tiling, higher resolution, or smaller family subsets change the condition.
-- A frozen Chrome binary/font environment is still needed for cross-machine
-  pixel reproducibility. Browser versions are recorded, not downloaded/pinned by
-  this repository. A fixed settle delay does not guarantee arbitrary future
-  animated tasks are stable; only the declared pilot tasks are supported.
-- Full training orchestration, balanced experimental mixtures, learning curves,
-  training checkpoints, richer actions, and additional original CompWoB tasks
-  remain follow-up work.
+Exports verify task identity and trajectory/image continuity, then copy only
+successful training images and labels. Evaluator artifacts stay out of messages.
+Model reasoning is not supervised. Portable JSONL needs a model-specific collator;
+SeeClick conversations follow its loader with adapted context and JSON targets.
+Check processed image legibility, coordinate conventions, and token lengths in
+the actual model runtime. Export compatibility does not imply a trained/evaluated
+SeeClick checkpoint is included.

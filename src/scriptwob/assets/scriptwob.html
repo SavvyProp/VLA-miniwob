@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>scriptWoB workspace</title>
+  <link rel="stylesheet" href="../upstream/core/core.css">
+  <script src="../upstream/core/core.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 1000px; height: 760px; overflow: hidden;
+      background: #edf1f7; color: #172438; font: 16px Arial, sans-serif; }
+    #wrap, #sync-task-cover { width: 1000px; height: 760px; }
+    #query, #reward-display, #click-canvas, #timer, #episode-id { display: none !important; }
+    header { height: 64px; padding: 14px 18px; background: #172438; color: white;
+      display: flex; align-items: center; justify-content: space-between; }
+    header strong { font-size: 23px; letter-spacing: -.5px; }
+    header span { font-size: 18px; color: #dce5ef; }
+    #panels { display: grid; grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: 298px; gap: 12px; padding: 14px 16px; height: 636px; }
+    .card { min-width: 0; padding: 16px; background: #fff; border: 1px solid #becada;
+      border-radius: 10px; overflow: hidden; }
+    .card h2 { font-size: 22px; margin: 0 0 12px; line-height: 26px; }
+    .kind { color: #58677b; font-size: 16px; margin: 0 0 8px; }
+    .value { font-size: 36px; font-weight: 700; margin: 18px 0; overflow-wrap: anywhere; }
+    .state { padding: 12px; border: 1px solid #becada; background: #f3f6fa;
+      border-radius: 6px; margin: 14px 0; font-size: 24px; }
+    .muted { color: #536176; font-size: 14px; line-height: 20px; }
+    button { min-height: 42px; padding: 8px 10px; color: #172438; background: #fff;
+      border: 1px solid #8194ad; border-radius: 5px; font: bold 20px Arial, sans-serif;
+      cursor: pointer; }
+    button:hover { background: #e8eff9; }
+    button:focus { outline: none; }
+    button:disabled { opacity: .45; cursor: default; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    .primary { background: #184d91; color: white; border-color: #184d91; }
+    .primary:hover { background: #123a6e; }
+    .queue { width: 100%; margin: 0; }
+    .queue-card { padding: 12px; }
+    .queue-card h2 { margin-bottom: 4px; }
+    .queue-position { font-size: 16px; line-height: 20px; margin-bottom: 6px; }
+    .current-record { border: 1px solid #9dbce6; border-radius: 5px; background: #e0edff;
+      padding: 8px 10px; margin-bottom: 8px; }
+    .current-title { font-size: 19px; line-height: 24px; font-weight: 700; }
+    .current-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .current-fields span { display: block; font-size: 16px; line-height: 20px; }
+    .current-fields strong { display: block; font-size: 28px; line-height: 32px; }
+    .current-result { font-size: 18px; line-height: 22px; margin-top: 2px; }
+    .queue-seen { color: #536176; font-size: 12px; line-height: 15px; margin-top: 6px; }
+    .queue-controls { gap: 5px; }
+    .queue-controls button { min-height: 36px; padding: 6px 8px; font-size: 18px; }
+    .queue-note { font-size: 12px; line-height: 15px; margin-top: 4px; }
+    footer { height: 60px; padding: 9px 18px; border-top: 1px solid #becada;
+      display: flex; align-items: center; justify-content: space-between; background: #fff; }
+    footer span { font-size: 14px; color: #536176; }
+    #recent-events { font-size: 12px; line-height: 18px; color: #536176; }
+    footer button { min-width: 135px; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="query">Follow the procedure supplied with this workspace.</div>
+    <header><strong>scriptWoB</strong><span id="action-count">Recorded actions: 0</span></header>
+    <main id="panels"></main>
+    <footer><div id="recent-events">Finish the procedure, then click Done.</div><div id="done-control"></div></footer>
+  </div>
+  <script>
+    // Only public widget state enters this page. Script semantics stay in Python.
+    window.scriptwobConfig = null;
+    window.scriptwobClicks = [];
+    core.EPISODE_MAX_TIME = 1000000000;
+
+    function element(tag, className, text) {
+      const e = document.createElement(tag);
+      if (className) e.className = className;
+      if (text !== undefined) e.textContent = String(text);
+      return e;
+    }
+
+    function control(target, op, label, disabled = false, primary = false) {
+      const e = element('button', primary ? 'primary' : '', label);
+      e.type = 'button';
+      e.dataset.action = target + ':' + op;
+      e.disabled = disabled;
+      e.addEventListener('click', () => window.scriptwobClicks.push({target, op}));
+      return e;
+    }
+
+    function renderWidget(w) {
+      const card = element('section', 'card');
+      card.dataset.widget = w.id;
+      card.append(element('h2', '', w.label));
+      if (w.kind === 'counter') {
+        card.append(element('div', 'kind', 'Counter'), element('div', 'value', w.value));
+        const actions = element('div', 'controls');
+        actions.append(control(w.id, 'decrement', '− Decrease', w.value <= w.minimum),
+          control(w.id, 'increment', '+ Increase', w.value >= w.maximum));
+        card.append(actions, element('p', 'muted', 'Range: ' + w.minimum + ' to ' + w.maximum));
+      } else if (w.kind === 'button') {
+        card.append(element('div', 'kind', 'Button'),
+          element('div', 'state', 'Presses: ' + w.value),
+          control(w.id, 'click', w.label, w.value >= w.maximum));
+      } else if (w.kind === 'toggle') {
+        card.append(element('div', 'kind', 'Checkbox'),
+          element('div', 'state', w.value ? '☑ Checked' : '☐ Unchecked'),
+          control(w.id, 'toggle', w.value ? 'Uncheck' : 'Check'));
+      } else if (w.kind === 'status') {
+        card.append(element('div', 'kind', 'Status'), element('div', 'value', w.value));
+      } else if (w.kind === 'queue') {
+        card.classList.add('queue-card');
+        const remaining = Math.max(0, w.items.length - w.cursor);
+        card.append(element('div', 'queue-position', 'Position: ' + w.cursor + ' · Remaining: ' + remaining));
+        const queue = element('div', 'queue');
+        const current = w.items[w.cursor];
+        const record = element('div', 'current-record');
+        if (current) {
+          record.append(element('div', 'current-title', 'Current: ' + current.label));
+          const fields = element('div', 'current-fields');
+          for (const [name, value] of [['Category', current.category], ['Status', current.status]]) {
+            const field = element('div');
+            field.append(element('span', '', name), element('strong', '', value));
+            fields.append(field);
+          }
+          record.append(fields, element('div', 'current-result',
+            current.processed ? 'Result: ' + current.result : 'Not processed'));
+        } else {
+          record.append(element('div', 'current-title', 'End of queue'));
+        }
+        queue.append(record);
+        const actions = element('div', 'controls queue-controls');
+        actions.append(control(w.id, 'approve', 'Approve', !current || current.processed),
+          control(w.id, 'reject', 'Reject', !current || current.processed),
+          control(w.id, 'advance', 'Next', !current));
+        queue.append(actions);
+        const visited = w.items.slice(0, w.cursor).map(item => item.label);
+        if (visited.length) queue.append(element('div', 'queue-seen', 'Seen: ' + visited.join(', ')));
+        queue.append(element('div', 'queue-note', current ?
+          'Unopened items: ' + Math.max(0, remaining - 1) + ' · Next reveals their details.' : 'All items visited.'));
+        card.append(queue);
+      }
+      return card;
+    }
+
+    window.renderWorld = function(world, layout) {
+      const panels = document.getElementById('panels');
+      panels.replaceChildren();
+      for (const id of layout) {
+        const widget = world.widgets.find(w => w.id === id);
+        if (widget) panels.append(renderWidget(widget));
+      }
+      const events = world.events || [];
+      document.getElementById('action-count').textContent = 'Recorded actions: ' + events.length;
+      const recent = document.getElementById('recent-events');
+      recent.replaceChildren();
+      if (!events.length) recent.textContent = 'Finish the procedure, then click Done.';
+      events.slice(-2).forEach((text, index) => {
+        recent.append(element('div', '', (Math.max(0, events.length - 2) + index + 1) + '. ' + text));
+      });
+      document.getElementById('done-control').replaceChildren(control('done', 'done', 'Done', false, true));
+    };
+
+    function genProblem() {
+      window.scriptwobClicks = [];
+      const config = window.scriptwobConfig;
+      if (config) renderWorld(config.world, config.layout);
+      WOB_TASK_READY = true;
+    }
+    window.onload = () => core.startEpisode();
+  </script>
+</body>
+</html>

@@ -3,30 +3,27 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vla-miniwob"
-version = "0.1.0"
-description = "Order-controlled MiniWoB++ benchmark and validated VLA demonstrations"
+name = "scriptwob"
+version = "0.2.0"
+description = "Generated MiniWoB++ semantic scripts and validated frontier-expert demonstrations"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "miniwob", "numpy>=1.26", "pillow>=10", "pydantic>=2.8",
-  "openai>=2.0", "typer>=0.12", "h5py>=3.11",
+  "openai>=2.0", "typer>=0.12",
 ]
-
-[project.optional-dependencies]
-torch = ["torch>=2.2"]
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.9"]
 
 [project.scripts]
-vla-benchmark = "vla_miniwob.cli:app"
+scriptwob = "scriptwob.cli:app"
 
 [tool.uv.sources]
 miniwob = { git = "https://github.com/Farama-Foundation/miniwob-plusplus", rev = "33c3b4ddef8c6eb67c57a29663d844b1eda7e614" }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vla_miniwob"]
+packages = ["src/scriptwob"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
