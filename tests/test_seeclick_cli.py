@@ -4,6 +4,7 @@ import pytest
 from typer.testing import CliRunner
 
 from scriptwob import cli, seeclick_policy, seeclick_runtime, seeclick_training
+from scriptwob.collection import ResumeConfigurationError
 from scriptwob.generation import generate_manifest, write_manifest
 
 runner = CliRunner()
@@ -103,3 +104,34 @@ def test_evaluation_failure_still_closes_model(evaluation_cli, monkeypatch):
     monkeypatch.setattr(cli, "run", run)
     result = runner.invoke(cli.app, args)
     assert result.exit_code != 0 and observed["closed"]
+
+
+def test_fresh_evaluation_preserves_existing_run_and_closes_policy(evaluation_cli, tmp_path):
+    args, observed = evaluation_cli
+    original = tmp_path / "eval"
+    original.mkdir()
+    metadata = b'{"manifest_digest": "legacy"}\n'
+    (original / "run.json").write_bytes(metadata)
+    result = runner.invoke(cli.app, args + ["--fresh"])
+    assert result.exit_code == 0, result.output
+    assert observed["constructed"] and observed["closed"]
+    actual = observed["output"]
+    assert actual != original and actual.parent == original.parent
+    assert actual.is_dir()
+    assert f"Fresh run directory: {actual.resolve()}" in result.stderr
+    assert "fresh" not in observed["run_options"]
+    assert (original / "run.json").read_bytes() == metadata
+
+
+def test_evaluation_resume_error_is_clean_and_still_closes_policy(evaluation_cli, monkeypatch):
+    args, observed = evaluation_cli
+
+    def run(*args, **kwargs):
+        raise ResumeConfigurationError("Resume configuration differs: policy")
+
+    monkeypatch.setattr(cli, "run", run)
+    result = runner.invoke(cli.app, args)
+    assert result.exit_code == 1 and observed["closed"]
+    assert isinstance(result.exception, SystemExit)
+    assert "Resume configuration differs: policy" in result.stderr
+    assert "Traceback" not in result.output

@@ -168,8 +168,11 @@ is applied. Context overflow fails explicitly rather than removing history.
 `--max-episodes N` limits task coverage; `--max-total-steps N` limits new inference
 calls for this invocation. Evaluation allows one attempt per dev/test task. A
 budget-cut episode remains incomplete/failed, so use a sufficiently large budget
-for final scores. Repeating the command resumes remaining tasks; use a new output
-for a fresh evaluation. Adapter content hashes bind resume to the evaluated weights.
+for final scores. Add `--fresh` to start evaluation from the beginning in a new,
+uniquely named sibling directory. Its path is printed at startup and saved as
+`output_dir` in `report.json`; existing runs are preserved. Alternatively, specify
+a new, unused output path. Without `--fresh`, repeating the command resumes
+remaining tasks. Adapter content hashes bind resume to the evaluated weights.
 
 By default, a trained adapter must be evaluated with its training manifest, using
 that manifest's held-out split. `--allow-different-manifest` permits deliberate

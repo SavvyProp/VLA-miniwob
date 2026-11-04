@@ -359,6 +359,7 @@ def _report(output: Path, selected: list, new_attempts: int, new_calls: int, sto
     usage["complete"] = usage["attempts_with_incomplete_usage"] == 0
     report = {
         "schema_version": 1, "updated_utc": _now(),
+        "output_dir": str(output.resolve()),
         "new_attempts": new_attempts, "new_predict_calls": new_calls,
         "total_attempts": len(results), "attempted_episodes": len(by_episode),
         "successful_episodes": len(succeeded), "accepted_episodes": len(accepted),

@@ -3,14 +3,16 @@
 import json
 import os
 import shutil
+import tempfile
 from collections import Counter
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from . import __version__
-from .collection import run, write_json
+from .collection import ResumeConfigurationError, run, write_json
 from .export import export_dataset
 from .generation import FAMILIES, generate_manifest, read_manifest, task_fingerprint
 from .policies import OpenAITeacher, OraclePolicy, TeacherConfig, load_policy
@@ -28,6 +30,21 @@ LEVELS = {
 
 def _print(value):
     typer.echo(json.dumps(value, indent=2, allow_nan=False))
+
+
+def _run_rollouts(manifest, output: Path, policy, *, fresh: bool, **kwargs):
+    if fresh:
+        # Reserve a unique sibling atomically, without reading or modifying the
+        # old run. mkdtemp adds a random suffix even for concurrent invocations.
+        output.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        output = Path(tempfile.mkdtemp(prefix=f"{output.name}-{timestamp}-", dir=output.parent))
+        typer.echo(f"Fresh run directory: {output.resolve()}", err=True)
+    try:
+        return run(manifest, output, policy, **kwargs)
+    except ResumeConfigurationError as exc:
+        typer.echo(f"Error: {exc} Use --fresh to start a separate run.", err=True)
+        raise typer.Exit(1) from None
 
 
 def _policy(teacher: str, model: str, reasoning: str, max_output_tokens: int):
@@ -196,18 +213,23 @@ def collect(
     max_total_steps: Annotated[int, typer.Option(min=1)] = 10000,
     max_output_tokens: Annotated[int, typer.Option(min=1)] = 4096,
     headed: bool = False,
+    fresh: Annotated[bool, typer.Option(
+        help="Start from the beginning in a new, uniquely named sibling output directory."
+    )] = False,
 ):
-    """Collect successful train demonstrations. Re-running resumes; limits may increase.
+    """Collect successful train demonstrations. Use --fresh for a separate new run.
 
+    Without --fresh, re-running resumes and limits may increase.
     max-episodes selects a prefix of train instances. max-total-steps bounds NEW
     model calls this invocation. A budget-cut attempt is retained as unsuccessful.
     Oracle is privileged reference supervision, never frontier-model supervision.
     """
     manifest = read_manifest(manifest_path)
-    result = run(
+    result = _run_rollouts(
         manifest,
         output,
         _policy(teacher, model, reasoning, max_output_tokens),
+        fresh=fresh,
         mode="collect",
         split="train",
         attempts=attempts,
@@ -233,6 +255,9 @@ def evaluate(
     max_episodes: Annotated[int | None, typer.Option(min=1)] = None,
     max_total_steps: Annotated[int, typer.Option(min=1)] = 10000,
     headed: bool = False,
+    fresh: Annotated[bool, typer.Option(
+        help="Start from the beginning in a new, uniquely named sibling output directory."
+    )] = False,
 ):
     """Evaluate dev/test once per episode with a frontier expert or local policy plugin."""
     if split not in {"dev", "test"}:
@@ -245,10 +270,11 @@ def evaluate(
         if policy_factory
         else _policy(teacher, model, reasoning, 4096)
     )
-    result = run(
+    result = _run_rollouts(
         manifest,
         output,
         policy,
+        fresh=fresh,
         mode="evaluate",
         split=split,
         attempts=1,
@@ -317,6 +343,9 @@ def evaluate_seeclick_command(
     max_new_tokens: Annotated[int, typer.Option(min=1)] = 64,
     allow_different_manifest: bool = False,
     headed: bool = False,
+    fresh: Annotated[bool, typer.Option(
+        help="Start from the beginning in a new, uniquely named sibling output directory."
+    )] = False,
 ):
     """Evaluate a trained SeeClick run/checkpoint, or 'base' for the pretrained baseline."""
     from .seeclick_policy import SeeClickPolicy
@@ -342,10 +371,11 @@ def evaluate_seeclick_command(
         max_new_tokens=max_new_tokens,
     )
     try:
-        result = run(
+        result = _run_rollouts(
             manifest,
             output,
             policy,
+            fresh=fresh,
             mode="evaluate",
             split=split,
             attempts=1,

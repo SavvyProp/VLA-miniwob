@@ -128,7 +128,22 @@ uv run --env-file .env --frozen scriptwob collect \
   --attempts 3 --max-total-steps 10000
 ```
 
-Repeating a command resumes and skips successes. Increase `--max-episodes` and
+To start from the beginning, add `--fresh`:
+
+```bash
+uv run --env-file .env --frozen scriptwob collect \
+  configs/seed_suite.json runs/astra-train \
+  --fresh --attempts 3 --max-total-steps 10000
+```
+
+`--fresh` creates a uniquely named sibling directory such as
+`runs/astra-train-20261103T120000Z-abcd1234`, leaving any existing run untouched.
+The actual path is printed at startup and saved as `output_dir` in `report.json`.
+Use that path for subsequent report, export, and training commands. Each invocation
+with `--fresh` starts over; it also works with `evaluate` and `evaluate-seeclick`.
+A new, unused output path starts from the beginning without needing this flag.
+
+Without `--fresh`, repeating a command resumes and skips successes. Increase `--max-episodes` and
 `--attempts` as needed; the request budget can change between invocations. An
 attempt interrupted by a budget limit or crash is retained as unsuccessful; its
 next retry starts afresh. A changed manifest, policy/model/prompt, implementation,
