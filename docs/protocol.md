@@ -96,6 +96,12 @@ tasks remain unattempted; publish coverage and failure counts alongside scores.
 Collection yield is not student evaluation accuracy.
 
 Token totals aggregate available provider metadata. Interrupted/failed requests
+and responses lost during SDK retries may have unreported usage. By default each
+prediction allows up to three transport retries before collection stops; these
+retries precede GUI execution and do not consume additional episode attempts.
+The step budget counts predictions, while HTTP attempts and retries are logged
+separately. Only the final response's usage is available after a recovered retry,
+so such calls mark usage incomplete even when their GUI task succeeds. Requests
 can have unknown usage, so totals may not reflect all billed usage. Request limits
 do not enforce a dollar budget. Refusals and invalid model outputs are retained.
 

@@ -150,7 +150,13 @@ def load_model(
         "code_revision": config.model_revision,
         "trust_remote_code": True,
         "torch_dtype": dtype,
-        "device_map": {"": config.device},
+        # Accelerate 0.27 compares cuda:0 with its unindexed cuda device. Its
+        # GPU-zero allowance requires integer 0, not the string "cuda:0".
+        # Resolve bare "cuda" to the same GPU zero checked by _validate_hardware.
+        "device_map": {
+            "": int(config.device.partition(":")[2] or 0)
+            if config.device.startswith("cuda") else config.device
+        },
         "low_cpu_mem_usage": True,
         "use_safetensors": True,
         "bf16": config.precision == "bf16",

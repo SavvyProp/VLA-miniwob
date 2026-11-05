@@ -155,6 +155,29 @@ change context length, batch size, data, LoRA settings, or model revisions, star
 new training output. Evaluation of an intermediate checkpoint remains available
 even if the training process stopped.
 
+### Device mismatch during training startup
+
+The pinned Accelerate release can report that an "8-bit" model is on a different
+device even for 4-bit training on one GPU: its unindexed `cuda` device compares
+unequal to the loader's `cuda:0` string. The loader now passes integer CUDA indices
+(`device_map={"": 0}` for the training GPU), which this release handles correctly.
+Keep `device: "cuda:0"` in the JSON configuration; the loader converts it internally.
+
+After applying the loader fix, start a new training output because the source
+fingerprint has changed. Reuse the failed run's frozen dataset export to avoid
+copying screenshots again:
+
+```bash
+uv run --project integrations/seeclick --extra cuda --frozen \
+  scriptwob train-seeclick runs/seeclick/dataset runs/seeclick-devicefix \
+  --config configs/seeclick_3090.json
+```
+
+Use the corresponding paths for your run and omit `--resume` on this new output.
+Keep the original `dataset/` directory in place: the new run references its
+images. Collected demonstrations and their provenance remain intact, and the
+pinned pretrained weights reuse the existing model cache.
+
 ## Evaluate
 
 ```bash

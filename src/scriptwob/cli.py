@@ -1,5 +1,6 @@
 """Generate scriptWoB tasks, collect experts, and export supervised examples."""
 
+import errno
 import json
 import os
 import shutil
@@ -12,7 +13,7 @@ from typing import Annotated
 import typer
 
 from . import __version__
-from .collection import ResumeConfigurationError, run, write_json
+from .collection import ResumeConfigurationError, _failure_details, run, write_json
 from .export import export_dataset
 from .generation import FAMILIES, generate_manifest, read_manifest, task_fingerprint
 from .policies import OpenAITeacher, OraclePolicy, TeacherConfig, load_policy
@@ -32,22 +33,86 @@ def _print(value):
     typer.echo(json.dumps(value, indent=2, allow_nan=False))
 
 
+def _print_stop_summary(
+    result: dict, output: Path, *, mode: str, report_may_be_incomplete: bool = False
+) -> None:
+    reason = result.get("stop_reason")
+    if reason not in {"provider_error", "infrastructure_error", "runner_error"}:
+        return
+    last_error = result.get("failures", {}).get("last_error")
+    split = None
+    if not last_error:
+        for name, entry in result.get("splits", {}).items():
+            child = entry.get("report") or {}
+            if entry.get("ran_this_invocation") and child.get("stop_reason") == reason:
+                last_error = child.get("failures", {}).get("last_error")
+                split = name
+                break
+    detail = []
+    error = {}
+    if split:
+        detail.append(f"split={split}")
+    if last_error:
+        error = last_error.get("error") or {}
+        if last_error.get("episode_id"):
+            detail.append(f"episode={last_error['episode_id']}")
+        if error.get("stage"):
+            detail.append(f"stage={error['stage']}")
+        error_type = error.get("exception_type") or last_error.get("error_type")
+        if error_type:
+            detail.append(error_type)
+        if error.get("cause_type"):
+            detail.append(f"cause={error['cause_type']}")
+        if error.get("errno") is not None:
+            detail.append(f"errno={error['errno']} {error.get('errno_name') or ''}".rstrip())
+        if error.get("os_message"):
+            detail.append(error["os_message"])
+    label = "Evaluation" if mode == "evaluate" else "Collection"
+    suffix = f" ({'; '.join(detail)})" if detail else ""
+    # Only selected, sanitized diagnostic fields belong here; never print raw
+    # exception messages, provider responses, or credentials from policy config.
+    typer.echo(f"{label} stopped: {reason}{suffix}", err=True)
+    report_note = " (may be incomplete or missing)" if report_may_be_incomplete else ""
+    typer.echo(f"Report: {(output / 'report.json').resolve()}{report_note}", err=True)
+    if error.get("errno") in {errno.ENOSPC, errno.EDQUOT}:
+        typer.echo("Free space or choose an output directory on another filesystem.", err=True)
+
+
 def _run_rollouts(manifest, output: Path, policy, *, fresh: bool, run_function=None, **kwargs):
-    if fresh:
-        # Reserve a unique sibling atomically, without reading or modifying the
-        # old run. mkdtemp adds a random suffix even for concurrent invocations.
-        output.parent.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        output = Path(tempfile.mkdtemp(prefix=f"{output.name}-{timestamp}-", dir=output.parent))
-        typer.echo(f"Fresh run directory: {output.resolve()}", err=True)
+    stage = "prepare_output"
     try:
-        return (run_function or run)(manifest, output, policy, **kwargs)
+        if fresh:
+            # Reserve a unique sibling atomically, without reading or modifying the
+            # old run. mkdtemp adds a random suffix even for concurrent invocations.
+            output.parent.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+            output = Path(tempfile.mkdtemp(prefix=f"{output.name}-{timestamp}-", dir=output.parent))
+            typer.echo(f"Fresh run directory: {output.resolve()}", err=True)
+        stage = "run"
+        result = (run_function or run)(manifest, output, policy, **kwargs)
     except ResumeConfigurationError as exc:
         typer.echo(f"Error: {exc} Use --fresh to start a separate run.", err=True)
         raise typer.Exit(1) from None
+    except OSError as exc:
+        # Disk exhaustion can prevent even the final report from being saved.
+        # Use the same sanitized diagnostics without claiming a report exists.
+        _print_stop_summary(
+            {"stop_reason": "infrastructure_error", "failures": {"last_error": {
+                "error_type": type(exc).__name__, "error": _failure_details(exc, stage),
+            }}},
+            output,
+            mode=kwargs.get("mode", "collect"),
+            report_may_be_incomplete=True,
+        )
+        raise typer.Exit(1) from None
+    _print(result)
+    _print_stop_summary(result, output, mode=kwargs.get("mode", "collect"))
+    return result
 
 
-def _policy(teacher: str, model: str, reasoning: str, max_output_tokens: int):
+def _policy(
+    teacher: str, model: str, reasoning: str, max_output_tokens: int, transport_retries: int = 3
+):
     if teacher == "oracle":
         return OraclePolicy()
     if teacher != "openai":
@@ -57,7 +122,10 @@ def _policy(teacher: str, model: str, reasoning: str, max_output_tokens: int):
             "Set OPENAI_API_KEY in the environment (or use uv run --env-file .env)."
         )
     return OpenAITeacher(
-        TeacherConfig(model=model, reasoning_effort=reasoning, max_output_tokens=max_output_tokens)
+        TeacherConfig(
+            model=model, reasoning_effort=reasoning, max_output_tokens=max_output_tokens,
+            transport_retries=transport_retries,
+        )
     )
 
 
@@ -219,12 +287,16 @@ def collect(
     all_splits: Annotated[bool, typer.Option(
         help="Collect train demonstrations and dev/test expert rollouts in separate subdirectories."
     )] = False,
+    transport_retries: Annotated[int, typer.Option(
+        min=0, max=3, help="Additional SDK HTTP retries per prediction; 0 disables retries."
+    )] = 3,
 ):
     """Collect demonstrations; add --all-splits to include dev/test expert rollouts.
 
     Use --fresh for a separate new run. Otherwise, re-running resumes.
     max-episodes selects a prefix per split. max-total-steps bounds NEW model
-    calls across the entire invocation. Dev/test each allow one attempt per task.
+    predictions across the entire invocation; SDK HTTP retries are additional.
+    Dev/test each allow one attempt per task.
     A budget-cut attempt is retained as unsuccessful.
     Oracle is privileged reference supervision, never frontier-model supervision.
     """
@@ -234,7 +306,7 @@ def collect(
     result = _run_rollouts(
         manifest,
         output,
-        _policy(teacher, model, reasoning, max_output_tokens),
+        _policy(teacher, model, reasoning, max_output_tokens, transport_retries),
         fresh=fresh,
         run_function=collect_suite if all_splits else None,
         **({} if all_splits else {"mode": "collect", "split": "train"}),
@@ -243,7 +315,6 @@ def collect(
         max_total_steps=max_total_steps,
         headless=not headed,
     )
-    _print(result)
     if result["stop_reason"] in {"provider_error", "infrastructure_error", "runner_error"}:
         raise typer.Exit(1)
 
@@ -264,6 +335,9 @@ def evaluate(
     fresh: Annotated[bool, typer.Option(
         help="Start from the beginning in a new, uniquely named sibling output directory."
     )] = False,
+    transport_retries: Annotated[int, typer.Option(
+        min=0, max=3, help="Additional SDK HTTP retries per prediction; 0 disables retries."
+    )] = 3,
 ):
     """Evaluate dev/test once per episode with a frontier expert or local policy plugin."""
     if split not in {"dev", "test"}:
@@ -274,7 +348,7 @@ def evaluate(
     policy = (
         load_policy(policy_factory, json.loads(policy_config.read_text()) if policy_config else {})
         if policy_factory
-        else _policy(teacher, model, reasoning, 4096)
+        else _policy(teacher, model, reasoning, 4096, transport_retries)
     )
     result = _run_rollouts(
         manifest,
@@ -288,7 +362,6 @@ def evaluate(
         max_total_steps=max_total_steps,
         headless=not headed,
     )
-    _print(result)
     if result["stop_reason"] in {"provider_error", "infrastructure_error", "runner_error"}:
         raise typer.Exit(1)
 
@@ -391,7 +464,6 @@ def evaluate_seeclick_command(
         )
     finally:
         policy.close()
-    _print(result)
     if result["stop_reason"] in {"provider_error", "infrastructure_error", "runner_error"}:
         raise typer.Exit(1)
 

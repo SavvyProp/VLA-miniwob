@@ -244,7 +244,7 @@ def test_4bit_training_restores_frozen_vision_precision_and_limits_lora(fake_dep
     assert calls["loader"]["code_revision"] == runtime.SEECLICK_REVISION
     assert calls["loader"]["use_safetensors"] is True
     assert calls["loader"]["use_flash_attn"] is False
-    assert calls["loader"]["device_map"] == {"": "cuda:0"}
+    assert calls["loader"]["device_map"] == {"": 0}
     assert calls["quantization"]["llm_int8_skip_modules"] == ["transformer.visual", "lm_head"]
     assert calls["quantization"]["bnb_4bit_quant_type"] == "nf4"
     assert calls["prepare"]["use_gradient_checkpointing"] is True
@@ -263,13 +263,88 @@ def test_baseline_inference_does_not_create_random_adapter(fake_dependencies):
     assert model.mode == "eval"
 
 
+@pytest.mark.parametrize(
+    "configured_device,current_device,expected_index",
+    [("cuda", 2, 0), ("cuda:0", 2, 0), ("cuda:2", 0, 2)],
+)
+@pytest.mark.parametrize("training", [False, True])
+def test_cuda_loader_uses_explicit_index_even_when_another_gpu_is_current(
+    fake_dependencies, configured_device, current_device, expected_index, training
+):
+    _, calls, torch = fake_dependencies
+    torch.cuda.device_count = lambda: 3
+    torch.cuda.current_device = lambda: current_device
+    runtime.load_model(runtime.SeeClickModelConfig(device=configured_device), training=training)
+    # Accelerate 0.27.2 distinguishes the string "cuda:0" from integer 0 when its
+    # training device is the unindexed CUDA alias. Always pass the integer form.
+    device = calls["loader"]["device_map"][""]
+    assert type(device) is int
+    assert device == expected_index
+
+
 def test_cpu_lora_training_keeps_base_frozen_and_enables_checkpoint_inputs(fake_dependencies):
     model, calls, _ = fake_dependencies
     config = runtime.SeeClickModelConfig(device="cpu", quantization="none", precision="fp32")
     runtime.load_model(config, training=True)
     assert "quantization" not in calls
+    assert calls["loader"]["device_map"] == {"": "cpu"}
     assert model.input_grads and model.checkpointing
     assert not model.visual.requires_grad
+
+
+def test_pinned_accelerate_accepts_quantized_loader_map_on_unindexed_cuda(
+    monkeypatch, request
+):
+    """Exercise Accelerate's real device check on a CPU host, with no model download."""
+    torch = pytest.importorskip("torch")
+    accelerate = pytest.importorskip("accelerate")
+    if accelerate.__version__ != "0.27.2":
+        pytest.skip("regression for the isolated runtime's pinned Accelerate 0.27.2")
+    import accelerate.accelerator as accelerator_module
+    from accelerate.utils import DistributedType, DynamoBackend
+
+    _, calls, _ = request.getfixturevalue("fake_dependencies")
+    runtime.load_model(runtime.SeeClickModelConfig(), training=True)
+
+    # torch.device(int) queries a real accelerator. Resolve just that constructor
+    # on this CPU host; all equality checks and prepare_model logic remain real.
+    class DeviceMeta(type):
+        def __instancecheck__(cls, value):
+            return isinstance(value, torch.device)
+
+    class Device(metaclass=DeviceMeta):
+        def __new__(cls, value):
+            return torch.device("cuda", value) if isinstance(value, int) else torch.device(value)
+
+    torch_proxy = SimpleNamespace(**vars(torch))
+    torch_proxy.device = Device
+    monkeypatch.setattr(accelerator_module, "torch", torch_proxy)
+
+    # Construct only the preparation state, avoiding shared Accelerate state or
+    # CUDA initialization. The tiny CPU module is never moved or quantized.
+    accelerator = object.__new__(accelerate.Accelerator)
+    accelerator.device_placement = False
+    accelerator.native_amp = False
+    accelerator._models = []
+    accelerator.state = SimpleNamespace(
+        device=torch.device("cuda"),
+        distributed_type=DistributedType.NO,
+        mixed_precision="no",
+        dynamo_plugin=SimpleNamespace(backend=DynamoBackend.NO),
+    )
+    model = torch.nn.Linear(1, 1)
+    model.is_loaded_in_4bit = True
+    model.hf_device_map = {"": "cuda:0"}
+    with pytest.raises(ValueError, match="different device"):
+        accelerator.prepare_model(model)
+
+    model.hf_device_map = calls["loader"]["device_map"]
+    assert accelerator.prepare_model(model) is model
+
+    # The corrected map still rejects a genuinely different training GPU.
+    accelerator.state.device = torch.device("cuda:1")
+    with pytest.raises(ValueError, match="different device"):
+        accelerator.prepare_model(model)
 
 
 def test_existing_adapter_loaded_trainable_for_training(tmp_path, fake_dependencies):

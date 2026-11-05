@@ -131,9 +131,15 @@ annotation reaches the teacher. Model reasoning is not a training target.
 With `--all-splits`, `--max-episodes N` selects the first N instances **per split**,
 including previously attempted ones. Omit it to select every instance. The
 `--max-total-steps` budget is shared across all three splits and bounds new model
-requests in this invocation, including failures; default 10,000. If it runs out,
-later tasks or entire splits can remain unattempted. SDK transport retries are
-disabled by default. These are request limits, not dollar limits.
+predictions in this invocation, including failures; default 10,000. If it runs out,
+later tasks or entire splits can remain unattempted. Each prediction allows up to
+three additional HTTP retries using the OpenAI SDK's backoff. Set
+`--transport-retries 0` to disable these retries, or choose a value from 0 to 3.
+SDK retries happen before the GUI click, so they do not replay an executed action.
+They are separate from the per-task `--attempts` limit. Request attempts can therefore
+exceed `--max-total-steps` (up to four SDK request attempts per prediction by default).
+These limits do not cap dollar costs. Retry counts are logged; token usage from
+earlier failed requests may be unknown, even if the final request succeeds.
 
 Without `--all-splits`, collection still targets only train. For an optional,
 bounded training pilot:
@@ -175,6 +181,11 @@ attempt interrupted by a budget limit or crash is retained as unsuccessful; its
 next retry starts afresh. A changed manifest, policy/model/prompt, implementation,
 or headless setting requires a new run directory. Limit changes are recorded.
 Provider/infrastructure errors stop collection rather than consuming every task.
+Temporary API connection failures are retried within the current prediction
+first. After those retries are exhausted, the run stops and retains its results.
+To continue a stopped run, use its exact output directory and omit `--fresh`.
+Keep the original source code and teacher settings: changing the implementation
+or retry configuration requires a new run and cannot resume an older fingerprint.
 
 Only successful training trajectories are accepted. Failures remain auditable.
 Reports distinguish first-attempt performance, success after retries, coverage,

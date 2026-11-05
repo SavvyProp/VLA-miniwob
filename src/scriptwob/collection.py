@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import errno
 import fcntl
 import hashlib
 import json
 import os
 import shutil
+import traceback
 from collections import Counter
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -35,6 +37,29 @@ class RunLockedError(RuntimeError):
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _failure_details(error: BaseException, stage: str) -> dict:
+    """Keep useful diagnostics without exception text, URLs, payloads or locals."""
+    details = {
+        "stage": stage,
+        "exception_type": type(error).__name__,
+        "cause_type": type(error.__cause__).__name__ if error.__cause__ else None,
+        "traceback": [
+            {"file": Path(frame.filename).name, "line": frame.lineno, "function": frame.name}
+            for frame in traceback.extract_tb(error.__traceback__)
+        ],
+    }
+    if isinstance(error, OSError):
+        code = error.errno
+        details.update(errno=code, errno_name=errno.errorcode.get(code), os_message=None)
+        if isinstance(code, int):
+            try:
+                # Use the system's text, never arbitrary error.strerror or filenames.
+                details["os_message"] = os.strerror(code)
+            except (ValueError, OverflowError):
+                pass
+    return details
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -188,19 +213,26 @@ def run_episode(
     }
     write_json(staging / "attempt.json", metadata)
     reason, error_type, infrastructure = "", None, False
+    error_details = None
+    secondary_errors = []
+    stage = "policy_reset"
     calls, transitions, reset_ok = 0, 0, False
     private: dict = {}
     try:
         policy.reset(seed)
+        stage = "environment_reset"
         observation = env.reset(episode)
         reset_ok = True
+        stage = "save_initial_image"
         observation.image.save(staging / "000000.png")
+        stage = "write_episode_metadata"
         write_json(staging / "episode.json", {
             **metadata, "action_contract": ACTION_VERSION,
             "instruction": observation.instruction,
             "image_size": list(observation.image.size), "max_steps": episode.max_steps,
             "supervision": policy.provenance().get("supervision", "model"),
         })
+        stage = "open_transitions"
         with (staging / "transitions.jsonl").open("w") as stream:
             while not env.terminated and env.steps < episode.max_steps:
                 if calls >= call_budget:
@@ -209,17 +241,26 @@ def run_episode(
                 calls += 1
                 # Persist intent before inference; a crash during the network call
                 # remains distinguishable from an episode with no provider requests.
+                stage = "write_progress"
                 write_json(staging / "progress.json", {
                     "predict_calls": calls, "transitions": transitions,
                     "inference_pending": True,
                 })
+                stage = "policy_predict"
                 try:
                     action = ClickAction.model_validate(policy.predict(observation))
                 finally:
-                    _record_calls(staging, policy)
+                    try:
+                        _record_calls(staging, policy)
+                    except Exception:
+                        stage = "write_provider_calls"
+                        raise
+                stage = "environment_step"
                 following = env.step(action)
                 image_name, next_image = f"{transitions:06d}.png", f"{transitions + 1:06d}.png"
+                stage = "save_next_image"
                 following.image.save(staging / next_image)
+                stage = "hash_images"
                 row = {
                     "step": transitions + 1,
                     "image": image_name, "image_sha256": _image_digest(staging / image_name),
@@ -230,11 +271,13 @@ def run_episode(
                     "next_image_sha256": _image_digest(staging / next_image),
                     "terminal": env.terminated,
                 }
+                stage = "write_transition"
                 stream.write(json.dumps(row, allow_nan=False) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())
                 transitions += 1
                 observation = following
+                stage = "write_progress"
                 write_json(staging / "progress.json", {
                     "predict_calls": calls, "transitions": transitions,
                     "inference_pending": False,
@@ -243,26 +286,38 @@ def run_episode(
             reason = "step_limit"
     except (PolicyOutputError, ValidationError) as exc:
         reason, error_type = "invalid_policy_output", type(exc).__name__
+        error_details = _failure_details(exc, stage)
     except OpenAIError as exc:
         reason, error_type, infrastructure = "provider_error", type(exc).__name__, True
-    except KeyboardInterrupt:
+        error_details = _failure_details(exc, stage)
+    except KeyboardInterrupt as exc:
         reason, error_type, infrastructure = "interrupted", "KeyboardInterrupt", True
+        error_details = _failure_details(exc, stage)
         raise
     except (OSError, TimeoutError, WebDriverException) as exc:
         reason, error_type, infrastructure = "infrastructure_error", type(exc).__name__, True
+        error_details = _failure_details(exc, stage)
     except Exception as exc:
         # Unexpected code failures are persisted but propagated, never silently
         # counted as a policy's semantic failure.
         reason, error_type, infrastructure = "runner_error", type(exc).__name__, True
+        error_details = _failure_details(exc, stage)
         raise
     finally:
         if reset_ok:
             try:
                 private = env.private_result()
             except Exception as exc:
-                reason, error_type, infrastructure = (
-                    "infrastructure_error", type(exc).__name__, True
-                )
+                verdict_error = _failure_details(exc, "environment_result")
+                if infrastructure and error_details is not None:
+                    secondary_errors.append(verdict_error)
+                else:
+                    if error_details is not None:
+                        secondary_errors.append(error_details)
+                    reason, error_type, infrastructure = (
+                        "infrastructure_error", type(exc).__name__, True
+                    )
+                    error_details = verdict_error
         success = bool(private.get("success", False)) and not reason
         result = {
             **metadata, "finished_utc": _now(),
@@ -270,12 +325,14 @@ def run_episode(
             "accepted": success and mode == "collect" and episode.split == "train",
             "reason": reason or ("success" if success else "task_failure"),
             "infrastructure_failure": infrastructure, "error_type": error_type,
+            "error": error_details, "secondary_errors": secondary_errors,
             "primitive_transitions": transitions, "predict_calls": calls,
             "browser_version": getattr(env, "browser_version", None),
             "supervision": policy.provenance().get("supervision", "model"),
             "provider_calls": getattr(policy, "calls", []),
             "provider_usage_complete": reason != "interrupted" and all(
-                isinstance(call.get("usage"), dict) for call in getattr(policy, "calls", [])
+                isinstance(call.get("usage"), dict) and call.get("usage_complete", True)
+                for call in getattr(policy, "calls", [])
             ),
             "environment": private,
         }
@@ -293,6 +350,8 @@ def _all_results(output: Path) -> list[dict]:
 
 def _report(output: Path, selected: list, new_attempts: int, new_calls: int, stop: str) -> dict:
     results = _all_results(output)
+    failed = [row for row in results if not row["success"]]
+    last_failure = max(failed, key=lambda row: row.get("finished_utc", ""), default=None)
     by_episode: dict[str, list[dict]] = {}
     for row in results:
         by_episode.setdefault(row["episode_id"], []).append(row)
@@ -338,10 +397,16 @@ def _report(output: Path, selected: list, new_attempts: int, new_calls: int, sto
               for level in sorted({episode.level for episode in selected})}
     usage = {
         "logged_provider_calls": 0, "calls_with_usage": 0, "calls_without_usage": 0,
+        "logged_transport_attempts": 0, "calls_with_unknown_transport_attempts": 0,
+        "calls_with_transport_retries": 0, "calls_with_incomplete_usage": 0,
         "attempts_with_incomplete_usage": 0,
         "input_tokens": 0, "output_tokens": 0, "total_tokens": 0,
         "cached_input_tokens": 0, "reasoning_output_tokens": 0,
-        "note": "Token totals sum reported usage only; missing usage is not zero cost.",
+        "note": (
+            "Token totals sum reported usage only; missing usage is not zero cost. "
+            "Transport retries are additional HTTP requests within a prediction; "
+            "earlier retry usage may be unknown even when the final response succeeds."
+        ),
     }
     for row in results:
         calls = row.get("provider_calls", [])
@@ -349,7 +414,16 @@ def _report(output: Path, selected: list, new_attempts: int, new_calls: int, sto
         if not row.get("provider_usage_complete", False):
             usage["attempts_with_incomplete_usage"] += 1
         for call in calls:
+            transport_attempts = call.get("transport_attempts")
+            if isinstance(transport_attempts, int) and transport_attempts > 0:
+                usage["logged_transport_attempts"] += transport_attempts
+            else:
+                usage["calls_with_unknown_transport_attempts"] += 1
+            if (call.get("transport_retries_taken") or 0) > 0:
+                usage["calls_with_transport_retries"] += 1
             tokens = call.get("usage")
+            if not isinstance(tokens, dict) or not call.get("usage_complete", True):
+                usage["calls_with_incomplete_usage"] += 1
             if not isinstance(tokens, dict):
                 usage["calls_without_usage"] += 1
                 continue
@@ -372,6 +446,10 @@ def _report(output: Path, selected: list, new_attempts: int, new_calls: int, sto
         "selected_episodes": len(selected), "stop_reason": stop,
         "metrics": metrics(selected), "levels": levels,
         "failures": {
+            "last_error": {
+                key: last_failure.get(key)
+                for key in ("episode_id", "attempt", "reason", "error_type", "error")
+            } if last_failure else None,
             "infrastructure_attempts": sum(row["infrastructure_failure"] for row in results),
             "provider_error_attempts": sum(row["reason"] == "provider_error" for row in results),
             "by_reason": dict(sorted(Counter(

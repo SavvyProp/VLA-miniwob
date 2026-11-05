@@ -1,5 +1,6 @@
 """Collection correctness and crash recovery without a browser or paid inference."""
 
+import errno
 import fcntl
 import hashlib
 import json
@@ -394,3 +395,96 @@ def test_report_sums_only_reported_usage_and_marks_unknown_provider_cost(tmp_pat
     assert usage["total_tokens"] == 240
     assert usage["cached_input_tokens"] == 80
     assert usage["reasoning_output_tokens"] == 20
+
+
+def test_disk_full_image_error_records_stage_and_system_error_without_secrets(
+    tmp_path, monkeypatch
+):
+    original_save = Image.Image.save
+    saves = 0
+
+    def save(image, path, *args, **kwargs):
+        nonlocal saves
+        saves += 1
+        if saves == 2:
+            raise OSError(errno.ENOSPC, "secret-exception-text", "secret-filename")
+        return original_save(image, path, *args, **kwargs)
+
+    monkeypatch.setattr(Image.Image, "save", save)
+    policy = Policy()
+    report = run(make_manifest(2), tmp_path, policy, env_factory=FakeEnvironment)
+    assert report["stop_reason"] == "infrastructure_error"
+    assert report["new_attempts"] == policy.total_calls == 1
+    error = report["failures"]["last_error"]["error"]
+    assert error["stage"] == "save_next_image"
+    assert error["errno"] == errno.ENOSPC
+    assert error["errno_name"] == "ENOSPC"
+    assert error["os_message"] == "No space left on device"
+    assert error["traceback"][-1]["function"] == "save"
+    assert all(set(frame) == {"file", "line", "function"} for frame in error["traceback"])
+    private = json.loads(result_files(tmp_path)[0].read_text())
+    assert private["error"] == error
+    assert private["error_type"] == "OSError"
+    assert not private["accepted"]
+    assert "secret-" not in json.dumps(private) + json.dumps(report)
+
+
+def test_first_infrastructure_failure_is_preserved_if_verdict_also_fails(tmp_path):
+    class BrokenVerdict(FakeEnvironment):
+        def private_result(self):
+            raise OSError(errno.ENOSPC, "secondary-error")
+
+    report = run(make_manifest(2), tmp_path, Policy(error=OSError(errno.EIO, "primary-error")),
+                 env_factory=BrokenVerdict)
+    assert report["stop_reason"] == "infrastructure_error"
+    private = json.loads(result_files(tmp_path)[0].read_text())
+    assert private["error"]["errno"] == errno.EIO
+    assert private["error"]["stage"] == "policy_predict"
+    assert private["secondary_errors"][0]["errno"] == errno.ENOSPC
+    assert private["secondary_errors"][0]["stage"] == "environment_result"
+    assert report["failures"]["last_error"]["error"] == private["error"]
+
+
+def test_oserror_without_errno_still_records_stage_and_traceback(tmp_path):
+    report = run(make_manifest(1), tmp_path, Policy(error=OSError("secret-error-message")),
+                 env_factory=FakeEnvironment)
+    error = report["failures"]["last_error"]["error"]
+    assert error["errno"] is error["errno_name"] is error["os_message"] is None
+    assert error["stage"] == "policy_predict"
+    assert error["traceback"][-1]["function"] == "predict"
+    assert "secret-error-message" not in json.dumps(report)
+
+
+@pytest.mark.parametrize("recover", [True, False])
+def test_sdk_retries_are_one_prediction_and_do_not_duplicate_gui_actions(
+    tmp_path, monkeypatch, recover
+):
+    import httpx2
+    from test_script_teacher import sdk_teacher, successful_response
+
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if not recover or len(requests) == 1:
+            raise httpx2.ConnectError("secret-url", request=request)
+        return successful_response()
+
+    teacher = sdk_teacher(handler, monkeypatch)
+    try:
+        report = run(make_manifest(1), tmp_path, teacher, env_factory=FakeEnvironment)
+    finally:
+        teacher.client.close()
+    assert report["new_attempts"] == 1
+    assert report["new_predict_calls"] == (2 if recover else 1)
+    assert report["stop_reason"] == ("complete" if recover else "provider_error")
+    assert len(FakeEnvironment.created[0].history) == (2 if recover else 0)
+    assert report["accepted_episodes"] == int(recover)
+    usage = report["provider_usage"]
+    assert usage["logged_transport_attempts"] == len(requests) == (3 if recover else 4)
+    assert usage["calls_with_unknown_transport_attempts"] == 0
+    assert usage["calls_with_transport_retries"] == 1
+    assert usage["calls_with_incomplete_usage"] == 1
+    assert usage["complete"] is False
+    assert usage["total_tokens"] == (240 if recover else 0)
+    assert "secret-" not in json.dumps(report)

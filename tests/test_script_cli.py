@@ -1,3 +1,4 @@
+import errno
 import json
 from pathlib import Path
 
@@ -13,6 +14,30 @@ from scriptwob.export import export_dataset
 from scriptwob.generation import FAMILIES, generate_manifest, read_manifest, write_manifest
 
 runner = CliRunner()
+
+
+@pytest.mark.parametrize("command", ["collect", "evaluate"])
+@pytest.mark.parametrize("retries", [None, 0])
+def test_cli_passes_transport_retry_configuration_to_teacher(
+    tmp_path, monkeypatch, command, retries
+):
+    path = tmp_path / "tasks.json"
+    write_manifest(path, generate_manifest(train=1, dev=1, test=1, seed=77))
+    captured = []
+
+    def teacher(config):
+        captured.append(config)
+        return Policy()
+
+    monkeypatch.setenv("OPENAI_API_KEY", "unused-test-key")
+    monkeypatch.setattr(cli, "OpenAITeacher", teacher)
+    monkeypatch.setattr(cli, "run", lambda *args, **kwargs: {"stop_reason": "complete"})
+    args = [command, str(path), str(tmp_path / "run")]
+    if retries is not None:
+        args += ["--transport-retries", str(retries)]
+    result = runner.invoke(app, args)
+    assert result.exit_code == 0, result.output
+    assert captured[0].transport_retries == (3 if retries is None else retries)
 
 
 def test_generate_inspect_validate_and_refuse_overwrite(tmp_path):
@@ -188,3 +213,184 @@ def test_all_splits_cli_collects_and_preserves_training_boundary(tmp_path, monke
     for split in ("dev", "test"):
         with pytest.raises(ValueError, match="train"):
             export_dataset(root / split, tmp_path / f"export-{split}")
+
+
+def test_disk_full_while_reserving_fresh_output_is_reported_without_model_calls(
+    tmp_path, monkeypatch
+):
+    manifest_path = tmp_path / "tasks.json"
+    write_manifest(manifest_path, generate_manifest(train=1, dev=0, test=0, seed=77))
+
+    def disk_full(*args, **kwargs):
+        raise OSError(errno.ENOSPC, "secret-exception", "secret-filename")
+
+    def unexpected_run(*args, **kwargs):
+        raise AssertionError("No rollouts should start")
+
+    monkeypatch.setattr(cli.tempfile, "mkdtemp", disk_full)
+    monkeypatch.setattr(cli, "run", unexpected_run)
+    result = runner.invoke(app, ["collect", str(manifest_path), str(tmp_path / "output"),
+                                 "--fresh", "--teacher", "oracle"])
+    assert result.exit_code == 1
+    assert not result.stdout
+    assert "No space left on device" in result.stderr
+    assert "stage=prepare_output" in result.stderr
+    assert "secret-" not in result.output
+
+
+@pytest.mark.parametrize("command", ["collect", "evaluate", "evaluate-seeclick", "all-splits"])
+def test_aborted_rollout_prints_error_and_actual_fresh_path(tmp_path, monkeypatch, command):
+    from scriptwob import seeclick_policy, seeclick_runtime, suite
+
+    manifest_path = tmp_path / "tasks.json"
+    write_manifest(manifest_path, generate_manifest(train=1, dev=1, test=1, seed=77))
+    original = tmp_path / "run"
+    observed = {}
+    failure = {
+        "episode_id": "L5-example", "reason": "infrastructure_error", "error_type": "OSError",
+        "error": {
+            "stage": "environment_reset", "exception_type": "OSError", "errno": 28,
+            "errno_name": "ENOSPC", "os_message": "No space left on device", "traceback": [],
+        },
+    }
+
+    def stopped_run(manifest, output, policy, **kwargs):
+        observed["output"] = output
+        child = {"stop_reason": "infrastructure_error", "failures": {"last_error": failure}}
+        report = child
+        if command == "all-splits":
+            report = {
+                "stop_reason": "infrastructure_error",
+                "splits": {
+                    "train": {"ran_this_invocation": True, "report": child},
+                    "dev": {"ran_this_invocation": False, "report": None},
+                },
+            }
+        observed["report"] = report
+        return report
+
+    class StubSeeClick:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def close(self):
+            observed["closed"] = True
+
+    monkeypatch.setattr(cli, "run", stopped_run)
+    monkeypatch.setattr(suite, "collect_suite", stopped_run)
+    monkeypatch.setattr(seeclick_policy, "SeeClickPolicy", StubSeeClick)
+    monkeypatch.setattr(seeclick_runtime, "resolve_checkpoint", lambda *args: (None, None, {}))
+    if command == "evaluate-seeclick":
+        args = [command, "base", str(manifest_path), str(original)]
+    else:
+        args = ["collect" if command == "all-splits" else command,
+                str(manifest_path), str(original), "--teacher", "oracle"]
+        if command == "all-splits":
+            args.append("--all-splits")
+    result = runner.invoke(app, [*args, "--fresh"])
+    assert result.exit_code == 1, result.output
+    assert json.loads(result.stdout) == observed["report"]
+    label = "Evaluation" if command.startswith("evaluate") else "Collection"
+    assert f"{label} stopped: infrastructure_error" in result.stderr
+    for detail in ("episode=L5-example", "stage=environment_reset", "OSError", "errno=28 ENOSPC",
+                   "No space left on device"):
+        assert detail in result.stderr
+    assert "Free space or choose an output directory on another filesystem." in result.stderr
+    assert f"Report: {(observed['output'] / 'report.json').resolve()}" in result.stderr
+    assert observed["output"] != original
+    assert result.output.rfind(f"{label} stopped:") > result.output.rfind('"stop_reason"')
+    if command == "all-splits":
+        assert "split=train" in result.stderr
+    if command == "evaluate-seeclick":
+        assert observed["closed"]
+
+
+@pytest.mark.parametrize("reason", ["provider_error", "infrastructure_error", "runner_error"])
+def test_stop_summary_handles_older_reports_without_details(tmp_path, monkeypatch, reason):
+    manifest_path = tmp_path / "tasks.json"
+    write_manifest(manifest_path, generate_manifest(train=1, dev=0, test=0, seed=77))
+    report = {"stop_reason": reason, "failures": {"by_reason": {reason: 1}}}
+    monkeypatch.setattr(cli, "run", lambda *args, **kwargs: report)
+    output = tmp_path / "run"
+    result = runner.invoke(app, ["collect", str(manifest_path), str(output), "--teacher", "oracle"])
+    assert result.exit_code == 1
+    assert json.loads(result.stdout) == report
+    assert f"Collection stopped: {reason}\n" in result.stderr
+    assert f"Report: {(output / 'report.json').resolve()}" in result.stderr
+
+
+def test_stop_summary_does_not_print_raw_provider_messages_or_tracebacks(tmp_path, capsys):
+    secret = "credential-from-provider-payload"
+    cli._print_stop_summary({
+        "stop_reason": "provider_error",
+        "failures": {"last_error": {
+            "episode_id": "episode-one", "error_type": "APIConnectionError",
+            "error": {
+                "stage": "policy_predict", "exception_type": "APIConnectionError",
+                "message": secret, "filename": secret, "traceback": [{"filename": secret}],
+            },
+        }},
+        "policy": {"api_key": secret},
+    }, tmp_path, mode="collect")
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "APIConnectionError" in captured.err
+    assert "stage=policy_predict" in captured.err
+    assert secret not in captured.err
+
+
+@pytest.mark.parametrize("code", [errno.ENOSPC, errno.EDQUOT])
+def test_disk_full_preventing_report_write_is_a_clean_cli_error(tmp_path, monkeypatch, code):
+    from scriptwob import collection
+
+    manifest_path = tmp_path / "tasks.json"
+    write_manifest(manifest_path, generate_manifest(train=1, dev=0, test=0, seed=77))
+    original = tmp_path / "run"
+    secret = "private-credential-in-error-message-and-filename"
+    actual_outputs = []
+    write_json = collection.write_json
+
+    def cannot_write_report(path, value):
+        if path.name == "report.json":
+            raise OSError(code, secret, f"/private/{secret}")
+        write_json(path, value)
+
+    def run_with_mock_environment(manifest, output, policy, **kwargs):
+        actual_outputs.append(output)
+        return collection_run(manifest, output, policy, env_factory=FakeEnvironment, **kwargs)
+
+    monkeypatch.setattr(collection, "write_json", cannot_write_report)
+    monkeypatch.setattr(cli, "run", run_with_mock_environment)
+    monkeypatch.setattr(cli, "_policy", lambda *args: Policy())
+    result = runner.invoke(app, ["collect", str(manifest_path), str(original), "--fresh"])
+    assert result.exit_code == 1
+    assert isinstance(result.exception, SystemExit)
+    assert result.stdout == ""
+    assert "Collection stopped: infrastructure_error" in result.stderr
+    assert f"errno={code} {errno.errorcode[code]}" in result.stderr
+    assert "Free space or choose an output directory on another filesystem." in result.stderr
+    assert "may be incomplete or missing" in result.stderr
+    assert f"Report: {(actual_outputs[0] / 'report.json').resolve()}" in result.stderr
+    assert actual_outputs[0] != original
+    assert "Traceback" not in result.output
+    assert secret not in result.output
+
+
+def test_fatal_os_error_without_errno_omits_raw_exception_message(tmp_path, monkeypatch):
+    manifest_path = tmp_path / "tasks.json"
+    write_manifest(manifest_path, generate_manifest(train=0, dev=1, test=0, seed=77))
+    secret = "private-credential-in-os-error"
+
+    def fail(*args, **kwargs):
+        raise OSError(secret)
+
+    monkeypatch.setattr(cli, "run", fail)
+    result = runner.invoke(app, ["evaluate", str(manifest_path), str(tmp_path / "run"),
+                                 "--split", "dev", "--teacher", "oracle"])
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert "Evaluation stopped: infrastructure_error" in result.stderr
+    assert "OSError" in result.stderr
+    assert "errno=" not in result.stderr
+    assert "may be incomplete or missing" in result.stderr
+    assert secret not in result.output
