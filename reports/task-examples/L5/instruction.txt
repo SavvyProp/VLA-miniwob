@@ -1,0 +1,1 @@
+Repeat exactly 3 times: [In order: [Repeat exactly 3 times: [Press "Coral"]]; then [Press "Coral"]]. When the whole script is complete, click Done. Do not perform any extra actions.

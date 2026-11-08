@@ -1,0 +1,1 @@
+If the checked state of "Silver" equals checked, execute [Press "Cedar"]; otherwise execute [Press "Indigo"]. When the whole script is complete, click Done. Do not perform any extra actions.

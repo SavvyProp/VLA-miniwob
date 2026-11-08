@@ -1,0 +1,209 @@
+{
+  "tasks": 200,
+  "successes": 103,
+  "success_rate_percent": 51.5,
+  "action_count_definition": "Length of replayed oracle trace, including final Done click.",
+  "oracle_verified_tasks": 200,
+  "protocol": "One saved evaluation attempt per task; all levels and input splits pooled.",
+  "caveat": "Sample sizes and level composition vary; this does not isolate length effects.",
+  "sources": [
+    {
+      "run": "runs/seeclick-800-devicefix-dev",
+      "split": "dev",
+      "tasks": 100,
+      "successes": 58,
+      "manifest_digest": "ab9e49135f5628c3418a601c161537a77500293b4fc6d09516a7772a4bee7c8b",
+      "run_json_sha256": "adbb6430392cdb4905d35531fce92cfb1f3fe3d960d04b3fb90c103cda0aa8aa"
+    },
+    {
+      "run": "runs/seeclick-800-devicefix-test",
+      "split": "test",
+      "tasks": 100,
+      "successes": 45,
+      "manifest_digest": "ab9e49135f5628c3418a601c161537a77500293b4fc6d09516a7772a4bee7c8b",
+      "run_json_sha256": "c12d1b56c4ef21ad4230db98e0d4341ce93f4d9a12b0daf75e3900ed7423abe3"
+    }
+  ],
+  "groups": [
+    {
+      "required_actions": 1,
+      "successes": 9,
+      "tasks": 16,
+      "success_rate_percent": 56.25,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 10,
+      "L4_tasks": 3,
+      "L5_tasks": 3
+    },
+    {
+      "required_actions": 2,
+      "successes": 44,
+      "tasks": 62,
+      "success_rate_percent": 70.96774193548387,
+      "L0_tasks": 34,
+      "L1_tasks": 0,
+      "L2_tasks": 22,
+      "L3_tasks": 5,
+      "L4_tasks": 1,
+      "L5_tasks": 0
+    },
+    {
+      "required_actions": 3,
+      "successes": 14,
+      "tasks": 30,
+      "success_rate_percent": 46.666666666666664,
+      "L0_tasks": 0,
+      "L1_tasks": 7,
+      "L2_tasks": 12,
+      "L3_tasks": 5,
+      "L4_tasks": 2,
+      "L5_tasks": 4
+    },
+    {
+      "required_actions": 4,
+      "successes": 14,
+      "tasks": 20,
+      "success_rate_percent": 70.0,
+      "L0_tasks": 0,
+      "L1_tasks": 10,
+      "L2_tasks": 0,
+      "L3_tasks": 1,
+      "L4_tasks": 4,
+      "L5_tasks": 5
+    },
+    {
+      "required_actions": 5,
+      "successes": 8,
+      "tasks": 17,
+      "success_rate_percent": 47.05882352941177,
+      "L0_tasks": 0,
+      "L1_tasks": 5,
+      "L2_tasks": 0,
+      "L3_tasks": 3,
+      "L4_tasks": 7,
+      "L5_tasks": 2
+    },
+    {
+      "required_actions": 6,
+      "successes": 8,
+      "tasks": 14,
+      "success_rate_percent": 57.142857142857146,
+      "L0_tasks": 0,
+      "L1_tasks": 12,
+      "L2_tasks": 0,
+      "L3_tasks": 2,
+      "L4_tasks": 0,
+      "L5_tasks": 0
+    },
+    {
+      "required_actions": 7,
+      "successes": 1,
+      "tasks": 12,
+      "success_rate_percent": 8.333333333333334,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 2,
+      "L4_tasks": 5,
+      "L5_tasks": 5
+    },
+    {
+      "required_actions": 8,
+      "successes": 0,
+      "tasks": 1,
+      "success_rate_percent": 0.0,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 0,
+      "L4_tasks": 0,
+      "L5_tasks": 1
+    },
+    {
+      "required_actions": 9,
+      "successes": 3,
+      "tasks": 8,
+      "success_rate_percent": 37.5,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 3,
+      "L4_tasks": 3,
+      "L5_tasks": 2
+    },
+    {
+      "required_actions": 10,
+      "successes": 0,
+      "tasks": 3,
+      "success_rate_percent": 0.0,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 0,
+      "L4_tasks": 2,
+      "L5_tasks": 1
+    },
+    {
+      "required_actions": 11,
+      "successes": 1,
+      "tasks": 10,
+      "success_rate_percent": 10.0,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 3,
+      "L4_tasks": 5,
+      "L5_tasks": 2
+    },
+    {
+      "required_actions": 13,
+      "successes": 1,
+      "tasks": 3,
+      "success_rate_percent": 33.333333333333336,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 0,
+      "L4_tasks": 0,
+      "L5_tasks": 3
+    },
+    {
+      "required_actions": 15,
+      "successes": 0,
+      "tasks": 1,
+      "success_rate_percent": 0.0,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 0,
+      "L4_tasks": 0,
+      "L5_tasks": 1
+    },
+    {
+      "required_actions": 16,
+      "successes": 0,
+      "tasks": 2,
+      "success_rate_percent": 0.0,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 0,
+      "L4_tasks": 0,
+      "L5_tasks": 2
+    },
+    {
+      "required_actions": 22,
+      "successes": 0,
+      "tasks": 1,
+      "success_rate_percent": 0.0,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 0,
+      "L4_tasks": 0,
+      "L5_tasks": 1
+    }
+  ]
+}

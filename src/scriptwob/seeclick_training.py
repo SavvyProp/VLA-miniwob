@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .collection import _writer_lock, implementation_digest, write_json
 from .export import export_dataset
+from .prompt_styles import instruction_version, validate_prompt_style
 from .seeclick_data import SeeClickCollator, SeeClickDataset, load_training_export
 from .seeclick_prompt import PROMPT_VERSION
 from .seeclick_runtime import SeeClickModelConfig, load_model, load_tokenizer
@@ -154,6 +155,7 @@ def train_seeclick(
     resume: bool = False,
     prepare_only: bool = False,
     allow_oracle: bool = False,
+    prompt_style: str | None = None,
 ) -> dict:
     """Fine-tune pretrained SeeClick from a collection run or a validated SFT export.
 
@@ -163,6 +165,8 @@ def train_seeclick(
     """
     source, output = Path(source).resolve(), Path(output).resolve()
     config = config or SeeClickTrainingConfig()
+    if prompt_style is not None:
+        validate_prompt_style(prompt_style)
     if int(os.environ.get("WORLD_SIZE", "1")) != 1:
         raise ValueError("This SeeClick training entry point supports one process and one GPU")
     if source == output or source.is_relative_to(output):
@@ -176,6 +180,12 @@ def train_seeclick(
     preloaded_export = (
         None if is_collection else load_training_export(source, allow_oracle=allow_oracle)
     )
+    if preloaded_export is not None and prompt_style is not None:
+        if preloaded_export.metadata.get("prompt_style", "natural") != prompt_style:
+            raise ValueError(
+                "Export prompt style differs from --prompt-style; use reformat-seeclick "
+                "with the original manifest to convert the existing demonstrations first"
+            )
     if output.exists() and not output.is_dir():
         raise ValueError("Training output must be a directory")
     if output.exists() and any(p.name != ".writer.lock" for p in output.iterdir()) and not resume:
@@ -191,10 +201,16 @@ def train_seeclick(
         if is_collection:
             dataset_path = output / "dataset"
             if not dataset_path.exists():
-                export_dataset(source, dataset_path, format="seeclick", allow_oracle=allow_oracle)
+                export_dataset(
+                    source, dataset_path, format="seeclick", allow_oracle=allow_oracle,
+                    prompt_style=prompt_style or "natural",
+                )
         else:
             dataset_path = source
         exported = preloaded_export or load_training_export(dataset_path, allow_oracle=allow_oracle)
+        selected_style = exported.metadata.get("prompt_style", "natural")
+        if prompt_style is not None and selected_style != prompt_style:
+            raise ValueError("Frozen dataset prompt style differs; use a new training output")
         identity_config = config.model_dump(mode="json")
         identity_config.pop("max_steps")
         identity = {
@@ -202,6 +218,8 @@ def train_seeclick(
             "dataset_fingerprint": exported.fingerprint,
             "implementation_digest": implementation_digest(),
             "prompt_version": PROMPT_VERSION,
+            "prompt_style": selected_style,
+            "instruction_version": instruction_version(selected_style),
             "runtime_versions": runtime_versions(),
             "allow_oracle": allow_oracle,
         }
@@ -233,6 +251,8 @@ def train_seeclick(
             "training_fingerprint": fingerprint,
             "limit_history": limit_history,
             "prompt_version": PROMPT_VERSION,
+            "prompt_style": selected_style,
+            "instruction_version": instruction_version(selected_style),
             "status": "preparing",
             "optimization_started": (
                 previous.get("optimization_started", False) if previous else False

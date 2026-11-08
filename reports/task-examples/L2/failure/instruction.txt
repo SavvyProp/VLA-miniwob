@@ -1,0 +1,1 @@
+If the value of "Maple" is at least 2, execute [Press "Coral"]; otherwise execute [Press "Violet"]. When the whole script is complete, click Done. Do not perform any extra actions.

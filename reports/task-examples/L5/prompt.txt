@@ -1,0 +1,10 @@
+SYSTEM
+You are a helpful assistant.
+
+USER
+Picture 1: <img>/home/savvy/PycharmProjects/VLA-miniwob/reports/task-examples/L5/initial.png</img>
+PROCEDURE
+Repeat exactly 3 times: [In order: [Repeat exactly 3 times: [Press "Coral"]]; then [Press "Coral"]]. When the whole script is complete, click Done. Do not perform any extra actions.
+EXECUTED CLICK HISTORY
+(none)
+Return the next click as JSON with action_type=4 and click_point=[x,y], normalized to [0,1].

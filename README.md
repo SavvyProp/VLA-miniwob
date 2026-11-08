@@ -40,6 +40,12 @@ repetitions, queue contents, and layout. Every instance must pass its reference
 executor. The frontier model supplies demonstrations; free-form LLM paraphrasing
 of instructions is not enabled.
 
+Collected demonstrations can also be reused with an indented, code-like instruction
+format covering every family. `reformat-seeclick` converts an existing training
+export using its original manifest; `export --prompt-style code` renders it directly
+from a collection. No new expert rollouts are needed, and SeeClick evaluation inherits
+the training prompt format. See [reuse with code-like instructions](docs/seeclick.md#reuse-collected-demonstrations-with-code-like-instructions).
+
 Levels describe structure, not guaranteed empirical difficulty. Each instance
 also records program size, nesting depths, predicate complexity, reference click
 count, executed branches/loops, and scene size. Zero-iteration cases are intentional.

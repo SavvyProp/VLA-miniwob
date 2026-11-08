@@ -1,0 +1,16 @@
+{
+  "level": 1,
+  "title": "Sequence",
+  "episode_id": "L1-59ee16c71bca36d3",
+  "family": "mixed_controls",
+  "split": "dev",
+  "success": true,
+  "clicks": 4,
+  "instruction": "In order: [Toggle \"Indigo\" once]; then [Click + on \"Coral\" once]; then [Toggle \"Indigo\" once]. When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-dev/attempts/a476695855e220293225fd7e-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "One selected successful example per level, not a performance sample"
+}

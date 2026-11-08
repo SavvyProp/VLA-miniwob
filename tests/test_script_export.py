@@ -1,19 +1,22 @@
 import hashlib
 import json
+import shutil
 
 import pytest
 from PIL import Image
 
 from scriptwob.contracts import ACTION_VERSION
-from scriptwob.export import export_dataset
+from scriptwob.export import export_dataset, reformat_seeclick_export
 from scriptwob.generation import generate_manifest
+from scriptwob.prompt_styles import instruction_version, render_episode_instruction
+from scriptwob.seeclick_data import load_training_export
 
 
-def fixture_run(tmp_path, *, supervision="frontier", split="train", accepted=True):
+def fixture_run(tmp_path, *, supervision="frontier", split="train", accepted=True, level=0):
     root = tmp_path / "run"
     directory = root / "attempts" / "episode-001"
     directory.mkdir(parents=True)
-    manifest = generate_manifest(train=1, dev=0, test=0, levels=[0], seed=17)
+    manifest = generate_manifest(train=1, dev=0, test=0, levels=[level], seed=17)
     source = manifest.episodes[0]
     (root / "manifest.json").write_text(manifest.model_dump_json())
     (root / "run.json").write_text(
@@ -155,3 +158,149 @@ def test_uncommitted_staging_attempt_is_not_exported(tmp_path):
     directory.rename(directory.with_name(".episode-001.partial"))
     with pytest.raises(ValueError, match="No accepted"):
         export_dataset(root, tmp_path / "dataset")
+
+
+def _procedure_and_history(sample):
+    context = sample["conversations"][0]["value"].split("</img>\nPROCEDURE\n", 1)[1]
+    return context.split("\nEXECUTED CLICK HISTORY\n", 1)
+
+
+@pytest.mark.parametrize("format", ["messages", "seeclick"])
+@pytest.mark.parametrize("level", range(6))
+def test_code_export_preserves_labels_images_and_history(tmp_path, format, level):
+    root, _ = fixture_run(tmp_path, level=level)
+    natural_path, code_path = tmp_path / "natural", tmp_path / "code"
+    natural = export_dataset(root, natural_path, format=format)
+    code = export_dataset(root, code_path, format=format, prompt_style="code")
+    assert code["prompt_style"] == "code"
+    assert code["instruction_version"] == instruction_version("code")
+    assert code["manifest_digest"] == natural["manifest_digest"]
+    assert code["image_sha256"] == natural["image_sha256"]
+    assert (code["episodes"], code["examples"]) == (1, 2)
+    for relative in code["image_sha256"]:
+        assert (natural_path / relative).read_bytes() == (code_path / relative).read_bytes()
+    if format == "seeclick":
+        first = load_training_export(natural_path)
+        second = load_training_export(code_path)
+        assert first.fingerprint != second.fingerprint
+        for before, after in zip(first.samples, second.samples, strict=True):
+            assert before["id"] == after["id"]
+            assert before["conversations"][1] == after["conversations"][1]
+            old_procedure, old_history = _procedure_and_history(before)
+            new_procedure, new_history = _procedure_and_history(after)
+            assert old_procedure != new_procedure
+            assert old_history == new_history
+    else:
+        before = [
+            json.loads(line) for line in (natural_path / "train.jsonl").read_text().splitlines()
+        ]
+        after = [json.loads(line) for line in (code_path / "train.jsonl").read_text().splitlines()]
+        for old, new in zip(before, after, strict=True):
+            assert old["messages"][1] == new["messages"][1]
+            assert old["images"] == new["images"]
+            assert "\nEXECUTED CLICK HISTORY\n" in new["messages"][0]["content"]
+
+
+def test_reformat_reuses_frozen_export_and_round_trips_without_collection(tmp_path):
+    root, _ = fixture_run(tmp_path)
+    source = tmp_path / "source"
+    export_dataset(root, source, format="seeclick")
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_bytes((root / "manifest.json").read_bytes())
+    # Legacy metadata and missing optional episode index remain reusable.
+    metadata_path = source / "dataset.json"
+    metadata = json.loads(metadata_path.read_text())
+    metadata.pop("prompt_style")
+    metadata.pop("instruction_version")
+    metadata_path.write_text(json.dumps(metadata))
+    (source / "episodes.json").unlink()
+    shutil.rmtree(root)
+    before = load_training_export(source)
+    code = tmp_path / "code"
+    summary = reformat_seeclick_export(source, manifest_path, code)
+    assert summary["source_export_fingerprint"] == before.fingerprint
+    assert summary["source_prompt_style"] == "natural"
+    after = load_training_export(code)
+    assert after.image_hashes == before.image_hashes
+    for old, new in zip(before.samples, after.samples, strict=True):
+        assert old["id"] == new["id"]
+        assert old["conversations"][1] == new["conversations"][1]
+        assert _procedure_and_history(old)[1] == _procedure_and_history(new)[1]
+        assert _procedure_and_history(old)[0] != _procedure_and_history(new)[0]
+    round_trip = tmp_path / "roundtrip"
+    reformat_seeclick_export(code, manifest_path, round_trip, prompt_style="natural")
+    for old, new in zip(before.samples, load_training_export(round_trip).samples, strict=True):
+        assert _procedure_and_history(old) == _procedure_and_history(new)
+        assert old["conversations"][1] == new["conversations"][1]
+    # Copies are independent files, not hard links that allow shared mutation.
+    relative = next(iter(before.image_hashes))
+    assert (source / relative).stat().st_ino != (code / relative).stat().st_ino
+
+
+@pytest.mark.parametrize("failure", ["manifest", "instruction", "nontrain", "missing_step"])
+def test_reformat_rejects_mismatched_or_nontraining_source(tmp_path, failure):
+    root, _ = fixture_run(tmp_path)
+    source = tmp_path / "source"
+    export_dataset(root, source, format="seeclick")
+    manifest_path = root / "manifest.json"
+    rows_path = source / "train.json"
+    metadata_path = source / "dataset.json"
+    rows = json.loads(rows_path.read_text())
+    metadata = json.loads(metadata_path.read_text())
+    if failure == "manifest":
+        other = generate_manifest(train=1, dev=0, test=0, levels=[0], seed=18)
+        manifest_path = tmp_path / "other.json"
+        manifest_path.write_text(other.model_dump_json())
+        expected = "manifest digest"
+    elif failure == "instruction":
+        rows[0]["conversations"][0]["value"] = rows[0]["conversations"][0]["value"].replace(
+            "\nPROCEDURE\n", "\nPROCEDURE\nChoose the answer in advance. "
+        )
+        rows_path.write_text(json.dumps(rows))
+        expected = "procedure differs"
+    elif failure == "nontrain":
+        other = generate_manifest(train=0, dev=1, test=0, levels=[0], seed=18)
+        manifest_path = tmp_path / "dev.json"
+        manifest_path.write_text(other.model_dump_json())
+        metadata["manifest_digest"] = other.digest
+        metadata_path.write_text(json.dumps(metadata))
+        for index, row in enumerate(rows):
+            row["id"] = f"{other.episodes[0].id}/{index}"
+        rows_path.write_text(json.dumps(rows))
+        (source / "episodes.json").unlink()
+        expected = "not in the training manifest"
+    else:
+        rows[0]["id"] = rows[0]["id"].rsplit("/", 1)[0] + "/2"
+        rows_path.write_text(json.dumps(rows))
+        (source / "episodes.json").unlink()
+        expected = "Noncontiguous"
+    with pytest.raises(ValueError, match=expected):
+        reformat_seeclick_export(source, manifest_path, tmp_path / "output")
+    assert not (tmp_path / "output").exists()
+
+
+def test_reformat_cleans_partial_output_on_copy_failure(tmp_path, monkeypatch):
+    root, _ = fixture_run(tmp_path)
+    source = tmp_path / "source"
+    export_dataset(root, source, format="seeclick")
+
+    def fail_copy(*args):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("scriptwob.export.shutil.copyfile", fail_copy)
+    with pytest.raises(OSError, match="disk full"):
+        reformat_seeclick_export(source, root / "manifest.json", tmp_path / "output")
+    assert not (tmp_path / "output").exists()
+
+
+def test_reformatted_procedures_match_manifest_renderer(tmp_path):
+    root, _ = fixture_run(tmp_path)
+    source, output = tmp_path / "source", tmp_path / "code"
+    export_dataset(root, source, format="seeclick")
+    reformat_seeclick_export(source, root / "manifest.json", output)
+    manifest = generate_manifest(train=1, dev=0, test=0, levels=[0], seed=17)
+    expected = render_episode_instruction(manifest.episodes[0], "code")
+    assert all(
+        _procedure_and_history(row)[0] == expected
+        for row in load_training_export(output).samples
+    )

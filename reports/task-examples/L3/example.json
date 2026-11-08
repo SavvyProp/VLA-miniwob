@@ -1,0 +1,16 @@
+{
+  "level": 3,
+  "title": "Repetition and stopping",
+  "episode_id": "L3-0b07fc1b1281c445",
+  "family": "queue_until",
+  "split": "test",
+  "success": true,
+  "clicks": 3,
+  "instruction": "Until the category of the current item in \"Violet\" equals \"red\", repeat [Click Next on \"Violet\" once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-test/attempts/1ac4147e56df2f66bf348ac8-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "One selected successful example per level, not a performance sample"
+}

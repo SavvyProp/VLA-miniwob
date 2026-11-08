@@ -1,0 +1,16 @@
+{
+  "level": 4,
+  "title": "Branches with loops",
+  "episode_id": "L4-2b9c28e331350bca",
+  "family": "while_if",
+  "split": "dev",
+  "success": true,
+  "clicks": 4,
+  "instruction": "While the value of \"Maple\" is less than 1, repeat [In order: [If the checked state of \"Indigo\" equals checked, execute [Press \"Silver\"]; otherwise execute [Press \"Amber\"]]; then [Toggle \"Indigo\" once]; then [Click + on \"Maple\" once]]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-dev/attempts/4d5ceeaba964568042ca1e1b-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "One selected successful example per level, not a performance sample"
+}

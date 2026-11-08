@@ -1,0 +1,183 @@
+Execution-path entropy for the evaluated scriptWoB scripts
+
+This analysis assigns an execution-path entropy to each of the 200 scripts in
+the saved SeeClick development and test evaluations. It combines all levels
+L0-L5. The success labels remain the outcomes of the original 100 development
+and 100 test episodes: 103 successes in total (51.5%). The model was not run on
+the counterfactual states used to calculate entropy. This is an analysis of
+existing results, not a new estimate of model performance across those states.
+
+Entropy depends on a distribution of initial states. A script and its complete
+initial state determine one execution here, so entropy conditional on that
+complete state is zero. To measure how execution can vary, this analysis holds
+the script fixed and introduces an explicit reference distribution over initial
+states. The resulting score measures control-flow variability under that
+distribution, not intrinsic complexity independent of a distribution.
+
+For a fixed script S, let W be its initial state, B(S,W) its correct control-flow
+path, and V(S,W) the event that the oracle can execute it successfully. Define:
+
+    p_S(b) = P_reference(B(S,W) = b | V(S,W))
+    H_path(S) = -sum_b p_S(b) * log2(p_S(b))
+
+H_path is measured in bits. The formula is Shannon entropy applied to the
+distribution of complete execution paths. Reference: C. E. Shannon (1948),
+A Mathematical Theory of Communication:
+https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf
+
+The reference distribution is defined as follows.
+
+The complete program AST is fixed, including all operators, branches, predicate
+constants, repeat counts, and target identifiers. Widget identities, labels,
+types, bounds, and layout information remain fixed. Natural-language wording
+does not contribute to the score. No script is regenerated from a new seed.
+
+Initial counter values are independent and uniform over {0, 1, 2, 3} intersected
+with that counter's allowed bounds. Initial toggles are independent fair
+Booleans. Status widgets are independently ready or waiting with equal
+probability. Buttons start at zero. For each queue, the initial length N is
+uniform on {1, 2, 3, 4, 5}. Each item's category is independently red or blue
+with equal probability; each item's status is independently open or closed
+with equal probability. Queues start at cursor zero with every item unprocessed
+and its result empty. Item identities and Record labels are assigned
+deterministically by position; they introduce no random information. Initial
+event history is empty.
+
+These choices are a reference intervention distribution. They are not claimed
+to reproduce the task generator's conditional distribution given the fixed
+script. The generator can correlate script constants with initial states to
+make tasks valid; replacing state fields independently deliberately breaks
+those correlations. Results should therefore always be described as entropy
+under this stated reference distribution.
+
+Each queue length receives total probability 1/5 before conditioning on
+solvability. Within a length, relevant binary fields receive their independent
+fair probabilities. For example, a category assignment for N items has
+probability (1/5) * 2^(-N); an assignment of both category and status has
+probability (1/5) * 2^(-2N). Enumerated worlds are not equally weighted across
+lengths. Queue category and status fields that the script never reads are
+analytically marginalized, rather than creating redundant executions. They do
+not affect action availability. This reduces computation without changing the
+specified distribution or entropy.
+
+The calculation enumerates the finite relevant state space exactly. World and
+path probability masses are accumulated as rational fractions. Only the final
+logarithms and displayed entropy values use floating-point arithmetic. There
+is no Monte Carlo sampling error or sample-count parameter.
+
+For these 200 scripts, 5,901 representative states were enumerated and 5,869
+were oracle-solvable. These are enumeration counts, not equally weighted
+samples. All 200 entropies, distinct-path counts, excluded probability masses,
+and maximum action counts matched an independent implementation. The analysis
+and existing interpreter checks passed 29 tests, including analytic examples
+for correlated decisions, nested branches, and weighted queue distributions.
+
+For each candidate state, the analysis reuses the authoritative Engine to run
+the correct actions and instrument the control-flow path. AST locations
+distinguish decision sites. The path preserves branch outcomes and the order
+and multiplicity of loop-body visits, so different stopping times or different
+branches are distinct paths. Compound predicates contribute their final branch
+outcome; Python's internal Boolean short-circuit order is not a separate path
+decision. The final Done action is fixed and adds no entropy. Paths remain
+distinct if they take different branches even when those branches happen to
+emit the same semantic actions. Thus this is control-flow path entropy, not
+entropy of action strings or pixel coordinates.
+
+Dependencies between decisions are preserved by executing the whole script
+on its evolving state. The calculation does not sum marginal entropy at each
+branch as though all checks were independent. Repeated checks of an unchanged
+flag have only the uncertainty of the original flag. Later checks of a toggled
+flag can also be determined by its initial value and earlier actions.
+
+Some counterfactual states require an unavailable action, such as decrementing
+a counter already at its minimum, or advancing an exhausted queue while an
+until condition remains false. Such states are outside the oracle-solvable
+support and their reference probability mass is excluded. All remaining masses
+are renormalized globally for that script, including across queue lengths;
+there is no separate renormalization within each length. In these 200 scripts,
+five queue_until scripts each exclude 19.375% of initial probability mass, and
+seven single_counter scripts each exclude 25%. The other scripts exclude no
+mass. These exclusions are recorded per script. They are failures of a script
+under an intervened initial state, not model failures.
+
+The analysis uses a separate 1,000-action guard, including Done, because the
+saved episode step budgets were tailored to their original initial states.
+Changing those states can change required execution length. An execution that
+hits an analysis action or interpreter work guard must stop the analysis with
+an error; it must not silently enter the excluded probability mass. The
+longest successful counterfactual execution here is 29 actions, so no such
+guard is reached. Saved evaluation budgets and outcomes are unchanged.
+
+Useful checks on the metric:
+
+* A fixed action sequence or a fixed-count loop with no state-dependent
+  branches has zero path entropy, however long it is.
+* One fair binary branch has entropy 1 bit. Rechecking the same unchanged fair
+  flag several times still gives 1 bit for the complete path.
+* A foreach loop with fixed per-item behavior and N uniform on 1..5 has
+  entropy log2(5) = 2.321928 bits, because the loop length varies.
+* If that foreach loop also makes one independent fair binary branch per
+  item, entropy is log2(5) + E[N] = 5.321928 bits.
+* If each item's branch tests the conjunction of independent fair category
+  and status matches, its true probability is 1/4. The analogous entropy is
+  log2(5) + E[N] * h2(1/4) = 4.755762 bits, where h2 is binary entropy.
+
+The plot pools the original task outcomes across L0-L5 and both splits. Each
+original evaluated episode contributes exactly once. The development and test
+runs use the same saved model checkpoint and manifest; their episode IDs do
+not overlap. Entropy is calculated without using model outcomes. The plot uses
+a separate zero-entropy group and fixed one-bit intervals (0,1], (1,2], and so
+on. Each bar reports the number of original successful episodes divided by the
+number of original evaluated episodes in that entropy group. Labels show the
+numerator and denominator. The (3,4] interval contains no tasks and must not be
+interpreted as an observed zero success rate.
+
+For this dataset the grouped results are:
+
+    Entropy (bits)   Successful / evaluated    Success rate
+    0                      70 / 85                82.35%
+    (0, 1]                 12 / 53                22.64%
+    (1, 2]                 13 / 34                38.24%
+    (2, 3]                  7 / 18                38.89%
+    (3, 4]                  0 /  0                undefined
+    (4, 5]                  0 /  3                 0.00%
+    (5, 6]                  1 /  7                14.29%
+
+Per-script entropy ranges from 0 to 5.321928 bits. These are descriptive
+associations. The groups mix task levels, action lengths, predicate complexity,
+and visual demands; the plot does not isolate a causal effect of entropy.
+Small groups, particularly the two highest-entropy groups, should not be
+treated as precise estimates of generalization performance. Multiple episodes
+also come from related templates. No model was trained, selected, or tuned
+using this combined analysis.
+
+Zero entropy does not mean a task is easy. Long fixed sequences, nested
+fixed-count loops, or a complicated predicate with a constant outcome under
+the chosen distribution can all have zero entropy. This score does not measure
+visual grounding difficulty, natural-language comprehension, predicate
+evaluation cost, or nesting depth directly. Varying queue length explicitly
+contributes loop-length uncertainty. A different initial-state distribution,
+or fixing queue length to its original value, would produce different scores.
+
+Outputs in reports/seeclick-800-entropy:
+
+* metrics_per_task.csv: one row per original evaluated episode, including
+  entropy, original outcome, task metadata, and excluded probability mass.
+  The optional original_surprisal_bits column is -log2(p_S(b_original)), the
+  information content of the one original path. It is distinct from entropy,
+  which averages over all valid paths, and is not the plotted x-axis.
+* success_by_entropy.csv: entropy-group counts and success rates.
+* path_distributions.jsonl: per-script path distributions for auditing.
+* analysis.json: analysis configuration, provenance, and summary statistics.
+* success_by_entropy.png and success_by_entropy.pdf: the Matplotlib plot.
+* methodology.txt: this note.
+
+The calculation is implemented in scripts/script_entropy.py and the analysis
+runner scripts/evaluate_path_entropy.py. Reproduce from the repository root:
+
+integrations/seeclick/.venv/bin/python scripts/evaluate_path_entropy.py \
+  runs/seeclick-800-devicefix-dev runs/seeclick-800-devicefix-test \
+  --prior reference --low-entropy-bin-width 1 --output reports/seeclick-800-entropy
+
+This command uses saved evaluation artifacts and local oracle executions. It
+does not require a GPU, a browser session, an API key, or paid model calls.

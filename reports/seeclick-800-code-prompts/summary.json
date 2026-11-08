@@ -1,0 +1,14 @@
+{
+  "episodes": 1000,
+  "splits": {
+    "train": 800,
+    "dev": 100,
+    "test": 100
+  },
+  "families": 22,
+  "prompt_style": "code",
+  "instruction_version": "scriptwob-code-v1",
+  "max_instruction_chars": 791,
+  "source_manifest": "runs/seeclick-800-devicefix-dev/manifest.json",
+  "note": "Prompt preview only; frozen training demonstrations are on Cadmium."
+}

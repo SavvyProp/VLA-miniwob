@@ -162,7 +162,134 @@ def test_policy_uses_shared_full_public_prompt_and_only_decodes_new_tokens(infer
                for transfer in inference.transfers)
     assert len(policy.calls) == 2
     assert policy.calls[-1]["status"] == "completed"
+    assert policy.calls[-1]["presented_instruction"] == observation().instruction
+    assert policy.provenance()["prompt_style"] == "natural"
+    assert policy.provenance()["instruction_version"] == "scriptwob-natural-v1"
+    assert policy.provenance()["prompt_style_overridden"] is False
+    assert policy.provenance()["instruction_map_sha256"] is None
     assert not Path(re.search(r"<img>(.*?)</img>", prompt).group(1)).exists()
+
+
+def test_code_checkpoint_infers_style_and_uses_shared_prompt_without_hidden_state(inference):
+    from scriptwob.generation import generate_manifest
+    from scriptwob.prompt_styles import build_instruction_map, instruction_version
+    from scriptwob.seeclick_prompt import PROMPT_VERSION, build_user_prompt
+
+    manifest = generate_manifest(train=1, dev=0, test=0, levels=[2])
+    episode = manifest.episodes[0]
+    mapping = build_instruction_map(manifest, "code")
+    presented = mapping[episode.instruction]
+    inference.resolution["metadata"] = {"dataset": {"metadata": {
+        "prompt_style": "code", "instruction_version": instruction_version("code"),
+    }}}
+    policy = SeeClickPolicy(instruction_map=mapping, max_context_tokens=8192)
+    public = Observation(episode.instruction, observation().image, observation().history)
+    policy.predict(public)
+    prompt = inference.tokenizer.prompts[-1]
+    image_path = re.search(r"<img>(.*?)</img>", prompt).group(1)
+    # Export uses the same renderer and shared wrapper; no inference-only hints.
+    assert prompt == build_user_prompt(presented, public.history, image_path)
+    assert presented != episode.instruction
+    assert policy.calls[-1]["presented_instruction"] == presented
+    assert not hasattr(policy, "manifest")
+    assert not hasattr(policy, "program")
+    assert not hasattr(policy, "world")
+    provenance = policy.provenance()
+    assert provenance["prompt_version"] == PROMPT_VERSION
+    assert provenance["prompt_style"] == "code"
+    assert provenance["trained_prompt_style"] == "code"
+    assert provenance["prompt_style_overridden"] is False
+    assert provenance["instruction_version"] == instruction_version("code")
+
+
+def test_explicit_code_ablation_defensively_copies_map_and_records_override(inference):
+    original = observation().instruction
+    code = 'IF the counter value equals 2:\n    Click "Oak".\nEND IF\nClick Done.'
+    mapping = {original: code, "Click Done.": "Click Done."}
+    policy = SeeClickPolicy(prompt_style="code", instruction_map=mapping)
+    expected_digest = hashlib.sha256(json.dumps(
+        mapping, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
+    mapping[original] = "Tampered instruction"
+    policy.predict(observation())
+    assert code in inference.tokenizer.prompts[-1]
+    assert "Tampered" not in inference.tokenizer.prompts[-1]
+    provenance = policy.provenance()
+    assert provenance["prompt_style_overridden"] is True
+    assert provenance["trained_prompt_style"] == "natural"
+    assert provenance["instruction_map_sha256"] == expected_digest
+    provenance["instruction_map_sha256"] = "tampered"
+    assert policy.provenance()["instruction_map_sha256"] == expected_digest
+
+
+def test_explicit_natural_override_ignores_code_map(inference):
+    inference.resolution["metadata"] = {"dataset": {"metadata": {
+        "prompt_style": "code", "instruction_version": "scriptwob-code-v1",
+    }}}
+    mapping = {observation().instruction: "Do something different"}
+    policy = SeeClickPolicy(prompt_style="natural", instruction_map=mapping)
+    policy.predict(observation())
+    assert observation().instruction in inference.tokenizer.prompts[-1]
+    assert "Do something different" not in inference.tokenizer.prompts[-1]
+    assert mapping == {observation().instruction: "Do something different"}
+    assert policy.provenance()["prompt_style_overridden"] is True
+    assert policy.provenance()["instruction_map_sha256"] is None
+
+
+@pytest.mark.parametrize("mapping", [None, {}, {"source": 42}, {42: "code"}, {"": "code"},
+                                    {"source": " "}, {"source": {"program": []}}])
+def test_invalid_code_map_fails_before_loading_model(inference, mapping):
+    with pytest.raises(ValueError, match="instruction_map"):
+        SeeClickPolicy(prompt_style="code", instruction_map=mapping)
+    assert inference.loads == []
+
+
+def test_code_checkpoint_requires_map_even_when_style_is_inferred(inference):
+    inference.resolution["metadata"] = {"dataset": {"metadata": {
+        "prompt_style": "code", "instruction_version": "scriptwob-code-v1",
+    }}}
+    with pytest.raises(ValueError, match="instruction_map"):
+        SeeClickPolicy()
+    assert inference.loads == []
+
+
+def test_code_checkpoint_requires_instruction_version(inference):
+    inference.resolution["metadata"] = {"dataset": {"metadata": {"prompt_style": "code"}}}
+    with pytest.raises(ValueError, match="missing instruction_version"):
+        SeeClickPolicy(instruction_map={"Known": "Known code"})
+    assert inference.loads == []
+
+
+def test_code_style_unknown_instruction_fails_without_original_prompt_fallback(inference):
+    policy = SeeClickPolicy(prompt_style="code", instruction_map={"Known": "Known code"})
+    with pytest.raises(PolicyOutputError, match="missing from the static code prompt map"):
+        policy.predict(observation())
+    assert inference.model.requests == []
+    assert inference.tokenizer.prompts == []
+    assert policy.calls == [{
+        "call": 1, "status": "invalid_output", "error_type": "UnknownInstruction",
+    }]
+
+
+def test_instruction_version_mismatch_is_rejected_before_loading(inference):
+    inference.resolution["metadata"] = {"dataset": {"metadata": {
+        "prompt_style": "code", "instruction_version": "scriptwob-code-future",
+    }}}
+    with pytest.raises(ValueError, match="instruction version differs"):
+        SeeClickPolicy(instruction_map={"Known": "Known code"})
+    assert inference.loads == []
+
+
+@pytest.mark.parametrize("explicit", [True, False])
+def test_unknown_prompt_style_fails_before_loading(inference, explicit):
+    kwargs = {"prompt_style": "unrecognized"} if explicit else {}
+    if not explicit:
+        inference.resolution["metadata"] = {
+            "dataset": {"metadata": {"prompt_style": "unrecognized"}},
+        }
+    with pytest.raises(ValueError):
+        SeeClickPolicy(**kwargs)
+    assert inference.loads == []
 
 
 def test_reset_retains_model_but_removes_episode_calls(inference):

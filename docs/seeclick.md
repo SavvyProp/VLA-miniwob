@@ -111,6 +111,83 @@ the assistant click JSON and its end token contribute to the loss. The original
 tokenizer expands each image tag to its native 256-token image span. No hidden
 evaluator state or frontier-model reasoning is used as supervision.
 
+## Reuse collected demonstrations with code-like instructions
+
+The `code` prompt style renders all 22 script families with indentation and explicit
+block endings: `IF`/`ELSE`, counted repetition, prechecked `WHILE`/`UNTIL`, iteration
+over records, and nested combinations. Conditions refer to visible controls;
+their truth values and the next correct action are never supplied. An IF chooses
+its branch once on entry and finishes that branch. Loop conditions are checked
+before the first and every subsequent iteration. Record iteration retains the
+explicit Next click after each body. The final action remains Done.
+
+This is a deterministic presentation of the existing task definition. It needs no
+frontier API calls or new demonstrations. Screenshots, assistant click labels,
+click histories, episode IDs, and train/dev/test membership are preserved. The
+model still returns one click JSON object, without a reasoning trace or a code
+interpreter. Existing natural-language exports and checkpoints remain usable.
+
+To reuse the frozen dataset from the 800-example training run:
+
+```bash
+uv run --frozen scriptwob reformat-seeclick \
+  runs/seeclick-800/dataset configs/suite_800.json datasets/seeclick-800-code
+
+uv run --project integrations/seeclick --extra cuda --frozen \
+  scriptwob train-seeclick datasets/seeclick-800-code runs/seeclick-800-code \
+  --config configs/seeclick_3090.json
+
+uv run --project integrations/seeclick --extra cuda --frozen \
+  scriptwob evaluate-seeclick runs/seeclick-800-code configs/suite_800.json \
+  runs/seeclick-800-code-dev --split dev
+```
+
+Use the existing directory that contains `dataset.json`, `train.json`, and `images/`
+if your frozen export has a different path. `configs/suite_800.json` must be the
+original manifest used for those demonstrations; it is a user-generated file,
+not a checked-in starter manifest. The converter verifies its digest and each
+sample's original instruction and train membership before writing the new export.
+It copies the original PNG bytes into the new directory, so allow space for one
+additional copy of the exported images. It refuses to overwrite existing output.
+Use `--prompt-style natural` to convert a code export back for a paired comparison.
+
+If the collection is available, export it directly instead of converting an
+existing export:
+
+```bash
+uv run --frozen scriptwob export runs/astra-all/train datasets/seeclick-code \
+  --format seeclick --prompt-style code
+```
+
+Alternatively, `train-seeclick` accepts `--prompt-style code` when its source is a
+collection directory. For an existing export, training inherits its recorded
+style; convert the export first to change it. Use a new training output for the
+new format. Training starts from the same pinned pretrained SeeClick model and
+performs the usual token-length preflight; longer prompts are never truncated.
+
+Evaluation automatically reads the instruction style from the trained checkpoint
+and renders the same frozen manifest accordingly. To test a prompt-only change
+on the old checkpoint, add `--prompt-style code` to `evaluate-seeclick` and use a
+new evaluation output directory. This deliberately changes its training format;
+it is a separate experiment from fine-tuning on code prompts. Existing checkpoints
+without style metadata default to `natural`. Run provenance records the chosen
+style/version and static instruction-map hash; each provider-call record saves
+the instruction actually presented. `episode.json` retains the original canonical
+instruction, so existing analysis can still check it against the frozen manifest.
+
+Preview every task's original and code-like instruction without training or Chrome:
+
+```bash
+uv run --frozen scriptwob render-prompts configs/suite_800.json \
+  reports/suite-800-code-prompts.jsonl
+```
+
+The preview includes all splits by default; `--split train`, `dev`, or `test`
+filters it. For an 800/100/100 suite it contains 1,000 task prompts. Training uses
+only accepted training demonstrations, with one next-click example per recorded
+step. No existing manifest or collected trajectory is rewritten. Improved task
+success is an empirical question; the conversion itself does not establish a gain.
+
 ## Check the data before loading weights
 
 ```bash

@@ -1,0 +1,92 @@
+{
+  "aggregation": "First-attempt successes summed across dev/test, divided by tasks summed",
+  "sources": {
+    "dev": {
+      "path": "runs/seeclick-800-devicefix-dev/report.json",
+      "sha256": "2fc28cbed4f23c817398f579021186badfe12dbd246b7aeeceabbe26174f5691"
+    },
+    "test": {
+      "path": "runs/seeclick-800-devicefix-test/report.json",
+      "sha256": "5e7d1f42c97e4517995c998ece6288273a22613638880fe56ed4a76a4710b392"
+    }
+  },
+  "overall": {
+    "successes": 103,
+    "tasks": 200,
+    "success_rate_percent": 51.5
+  },
+  "levels": [
+    {
+      "level": 0,
+      "title": "Atomic action",
+      "description": "Perform one basic operation, such as pressing a button.",
+      "dev_successes": 17,
+      "dev_tasks": 17,
+      "test_successes": 17,
+      "test_tasks": 17,
+      "successes": 34,
+      "tasks": 34,
+      "success_rate_percent": 100.0
+    },
+    {
+      "level": 1,
+      "title": "Sequence",
+      "description": "Perform several actions in a specified order.",
+      "dev_successes": 17,
+      "dev_tasks": 17,
+      "test_successes": 13,
+      "test_tasks": 17,
+      "successes": 30,
+      "tasks": 34,
+      "success_rate_percent": 88.23529411764706
+    },
+    {
+      "level": 2,
+      "title": "Conditional",
+      "description": "Choose actions using a visible if/else condition.",
+      "dev_successes": 6,
+      "dev_tasks": 17,
+      "test_successes": 3,
+      "test_tasks": 17,
+      "successes": 9,
+      "tasks": 34,
+      "success_rate_percent": 26.470588235294116
+    },
+    {
+      "level": 3,
+      "title": "Repetition and stopping",
+      "description": "Repeat a fixed count, while / until, or for each item.",
+      "dev_successes": 12,
+      "dev_tasks": 17,
+      "test_successes": 9,
+      "test_tasks": 17,
+      "successes": 21,
+      "tasks": 34,
+      "success_rate_percent": 61.76470588235294
+    },
+    {
+      "level": 4,
+      "title": "Branches with loops",
+      "description": "Combine conditional decisions with repetition.",
+      "dev_successes": 4,
+      "dev_tasks": 16,
+      "test_successes": 1,
+      "test_tasks": 16,
+      "successes": 5,
+      "tasks": 32,
+      "success_rate_percent": 15.625
+    },
+    {
+      "level": 5,
+      "title": "Nested control flow",
+      "description": "Execute loops within loops, sometimes with branches.",
+      "dev_successes": 2,
+      "dev_tasks": 16,
+      "test_successes": 2,
+      "test_tasks": 16,
+      "successes": 4,
+      "tasks": 32,
+      "success_rate_percent": 12.5
+    }
+  ]
+}

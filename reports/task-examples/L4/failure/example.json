@@ -1,0 +1,19 @@
+{
+  "level": 4,
+  "title": "Branches with loops",
+  "episode_id": "L4-7996104567cb0832",
+  "family": "foreach_if",
+  "split": "dev",
+  "success": false,
+  "clicks": 3,
+  "instruction": "For each remaining item in \"Coral\", in displayed order, execute [If the category of the current item in \"Coral\" does not equal \"blue\", execute [Click Approve for the current item in \"Coral\"]; otherwise execute [Click Reject for the current item in \"Coral\"]], then click Next on \"Coral\". Stop when no items remain. When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-dev/attempts/749e77259133c013e671e5e1-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "Selected illustrative rollout, not a performance sample",
+  "output_subdirectory": "L4/failure",
+  "failure_reason": "wrong_action",
+  "failure_explanation": "Approved blue Record 2 at step 3; the script required rejecting blue items."
+}

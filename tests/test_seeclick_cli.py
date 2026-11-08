@@ -33,12 +33,15 @@ def test_training_cli_configuration_overrides_and_resume(tmp_path, monkeypatch):
             "--resume",
             "--prepare-only",
             "--allow-oracle",
+            "--prompt-style",
+            "code",
         ],
     )
     assert result.exit_code == 0, result.output
     assert received["settings"].max_steps == 9
     assert received["settings"].learning_rate == 2e-4
     assert received["resume"] and received["prepare_only"] and received["allow_oracle"]
+    assert received["prompt_style"] == "code"
 
 
 @pytest.fixture
@@ -76,6 +79,62 @@ def test_evaluation_cli_uses_one_attempt_and_closes_policy(evaluation_cli):
     assert observed["run_options"]["split"] == "dev"
     assert observed["run_options"]["attempts"] == 1
     assert observed["run_options"]["mode"] == "evaluate"
+    assert observed["policy_options"]["prompt_style"] == "natural"
+    assert observed["policy_options"]["instruction_map"] is None
+
+
+def test_evaluation_inherits_code_style_and_only_passes_static_text(evaluation_cli):
+    from scriptwob.prompt_styles import build_instruction_map
+
+    args, observed = evaluation_cli
+    observed["metadata"] = {"dataset": {"metadata": {"prompt_style": "code"}}}
+    result = runner.invoke(cli.app, args)
+    assert result.exit_code == 0, result.output
+    options = observed["policy_options"]
+    assert options["prompt_style"] == "code"
+    assert options["instruction_map"] == build_instruction_map(observed["manifest"], "code")
+    assert all(isinstance(text, str) for text in options["instruction_map"].values())
+    result = runner.invoke(cli.app, args + ["--prompt-style", "natural"])
+    assert result.exit_code == 0, result.output
+    assert observed["policy_options"]["prompt_style"] == "natural"
+    assert observed["policy_options"]["instruction_map"] is None
+
+
+def test_evaluation_rejects_invalid_prompt_style_before_loading(evaluation_cli):
+    args, observed = evaluation_cli
+    result = runner.invoke(cli.app, args + ["--prompt-style", "typo"])
+    assert result.exit_code != 0
+    assert not observed["constructed"]
+
+
+def test_prompt_preview_and_existing_export_conversion(tmp_path):
+    from test_script_export import fixture_run
+
+    from scriptwob.seeclick_data import load_training_export
+
+    source, _ = fixture_run(tmp_path)
+    manifest_path = source / "manifest.json"
+    preview = tmp_path / "prompts.jsonl"
+    before = manifest_path.read_bytes()
+    result = runner.invoke(cli.app, ["render-prompts", str(manifest_path), str(preview)])
+    assert result.exit_code == 0, result.output
+    rows = [json.loads(line) for line in preview.read_text().splitlines()]
+    assert len(rows) == 1 and rows[0]["prompt_style"] == "code"
+    assert rows[0]["instruction"] != rows[0]["original_instruction"]
+    exported = tmp_path / "data"
+    result = runner.invoke(cli.app, [
+        "export", str(source), str(exported), "--format", "seeclick",
+    ])
+    assert result.exit_code == 0, result.output
+    converted = tmp_path / "code-data"
+    result = runner.invoke(cli.app, [
+        "reformat-seeclick", str(exported), str(manifest_path), str(converted),
+    ])
+    assert result.exit_code == 0, result.output
+    loaded = load_training_export(converted)
+    assert loaded.metadata["prompt_style"] == "code"
+    assert rows[0]["instruction"] in loaded.samples[0]["conversations"][0]["value"]
+    assert manifest_path.read_bytes() == before
 
 
 def test_evaluation_cli_rejects_train_before_loading_model(evaluation_cli):

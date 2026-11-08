@@ -1,0 +1,16 @@
+{
+  "level": 5,
+  "title": "Nested control flow",
+  "episode_id": "L5-77352b80ec6b060d",
+  "family": "nested_repeat",
+  "split": "dev",
+  "success": true,
+  "clicks": 13,
+  "instruction": "Repeat exactly 3 times: [In order: [Repeat exactly 3 times: [Press \"Coral\"]]; then [Press \"Coral\"]]. When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-dev/attempts/868cbe3f2477ffd66d6ad8da-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "One selected successful example per level, not a performance sample"
+}

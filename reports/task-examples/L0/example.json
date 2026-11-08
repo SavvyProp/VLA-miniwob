@@ -1,0 +1,16 @@
+{
+  "level": 0,
+  "title": "Atomic action",
+  "episode_id": "L0-a78dc67c2777ad97",
+  "family": "single_button",
+  "split": "dev",
+  "success": true,
+  "clicks": 2,
+  "instruction": "Press \"Cedar\". When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-dev/attempts/bfd7d11b3ee25bb6c1c0d25c-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "One selected successful example per level, not a performance sample"
+}

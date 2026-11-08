@@ -1,0 +1,1 @@
+Until the category of the current item in "Violet" equals "red", repeat [Click Next on "Violet" once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.

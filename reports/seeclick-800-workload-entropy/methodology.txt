@@ -1,0 +1,172 @@
+Execution-path entropy conditioned on the observed queue workload
+
+This analysis covers the same 200 SeeClick development and test tasks, pooled
+across L0-L5: 103 succeeded (51.5%). Success labels come from the original saved
+rollouts. Alternate initial states are executed only by the local oracle; the
+model is not rerun. Each original evaluated episode contributes once.
+
+The previous metric varied queue length uniformly from one to five items. It
+therefore assigned a one-item trial uncertainty about longer queues that the
+trial never encountered. The new default instead preserves each episode's
+actual queue length and cursor. Its version is
+scriptwob-observed-queue-length-v2, selected with --prior observed-workload.
+
+For fixed script S and observed queue workload Q, let B be the complete correct
+control-flow path, and V the event that the oracle can successfully execute the
+script in a candidate initial state. We compute Shannon entropy:
+
+    p(b) = P(B = b | S, Q, V)
+    H(B | S, Q, V) = -sum_b p(b) * log2(p(b))
+
+The result is measured in bits under the following explicit intervention
+distribution. It is not the task generator's conditional distribution.
+
+The program, constants, targets, widget inventory, labels, bounds and layout
+remain fixed. Each queue retains its observed size, cursor, record identities,
+labels, processed flags and results. For records at or beyond its cursor, each
+category field read by the script is independently red/blue with probability
+one half each; each read status field is independently open/closed. Earlier
+records and unread fields retain their observed values. Queue cursors cannot
+move backwards. These unchanged fields do not add uncertainty.
+
+Other widget priors are unchanged from the previous analysis: counter values
+are independent and uniform over legal values in {0, 1, 2, 3}; toggles are fair
+Booleans; status widgets are equally likely ready/waiting; button values start
+at zero. This fixes queue workload, NOT every aspect of workload or the entire
+page. In particular, varying a counter can change a numeric loop's iteration
+count. Conditioning on the complete initial state would yield zero entropy in
+this deterministic environment. Results must therefore retain this stated
+scope rather than claim complete instance-conditioned difficulty.
+
+All relevant states are enumerated exactly. State and path probabilities use
+rational fractions; only logarithms use floating point. The authoritative
+interpreter executes each state while instrumentation records decision sites,
+branch outcomes and loop-body visits. Dependencies between successive checks
+are preserved. Compound predicates contribute their final outcome rather than
+internal short-circuit operations. Different branches remain different paths
+even if their actions coincide. Done contributes no path uncertainty.
+
+States requiring unavailable actions are excluded, and all remaining masses
+are normalized globally for that script. Excluded mass is recorded per task.
+This is conditioning on oracle solvability, not counting model failures. A
+separate 1,000-action analysis guard, including Done, accommodates changed
+execution lengths. Reaching an action, interpreter-work or enumeration limit
+raises an error instead of silently excluding that state.
+
+The successful GIF episode L4-144551d7773f4c3a has one queue item. Its entropy
+changes from 5.321928 to 1 bit. With five items and independent fair red/blue
+categories, the same branching script would have 5 bits. A fixed-length foreach
+loop without state-dependent branches has zero path entropy, however many
+items it processes. Thus entropy measures control-flow variation, not execution
+length, visual difficulty, predicate evaluation cost or nesting depth alone.
+
+The CSV also reports a separate button-choice cost on the ORIGINAL CORRECT
+oracle trace, including for tasks whose model rollout failed:
+
+    original_choice_bits = sum_t log2(M_t)
+
+M_t counts enabled semantic buttons immediately before correct action t,
+including enabled Done and distractors. Disabled buttons and screen background
+are excluded. In this environment each step has one correct action. Therefore
+2^(-original_choice_bits) is the success probability of uniformly choosing
+among enabled buttons until the correct trace completes. It is not a model
+success prediction. For the one-item GIF, M_t is 5, 3, 2: the cost is 4.906891
+bits and that baseline probability is 1/30. This cost is exported separately,
+never added to path entropy. The joint bubble plot uses path entropy on its
+horizontal axis and button-choice cost on its vertical axis.
+
+The main bar plot groups original outcomes into zero entropy, right-closed 0.5-bit
+intervals from 0 to 2 bits, and one-bit intervals above 2 bits. A 1e-10-bit
+tolerance handles numerical roundoff at bin boundaries. Labels show the success
+rate and successes divided by evaluated tasks. Empty intervals are omitted from
+the plot, but retained in the CSV and JSON with undefined rates. The horizontal
+axis lists interval categories; intervals above 2 are wider in bits. Groups mix
+levels, lengths and predicate demands; the association is descriptive.
+
+These wider bins remove the previous 1/1 bars, but the highest-entropy groups
+still contain only two and four trials. Whiskers show approximate 95% Wilson
+score intervals for the success rate. For k successes in n tasks, p = k/n and
+z = 1.959963984540054, their center and radius are:
+
+    center = (p + z^2/(2n)) / (1 + z^2/n)
+    radius = z * sqrt(p*(1-p)/n + z^2/(4n^2)) / (1 + z^2/n)
+
+Bounds are center +/- radius, clipped to [0, 1]. Empty groups have undefined
+rates and bounds. These intervals use a reference binomial model of independent
+trials with a common success probability within each group. Related task
+templates and heterogeneous difficulties limit that assumption; the intervals
+are descriptive, not calibrated guarantees for new scripts. They concern
+success-rate precision, not uncertainty in the exactly enumerated entropy.
+
+A second plot pools neighboring entropy values to obtain more observations per
+rate. It keeps zero separate and sorts positive entropies, treating values equal
+after rounding to ten decimals as ties. Starting from the lowest positive value,
+it greedily accumulates complete tied groups until at least 20 tasks are present,
+then starts the next group. An undersized final group merges backward into its
+predecessor. If fewer than 20 positive tasks exist in total, they remain a single
+undersized group; zero also remains separate even when undersized. These cases
+are labeled explicitly. The grouping uses entropy and task counts only, never
+success labels. The forest plot displays each observed entropy range, success
+rate and Wilson interval. Here all four groups meet the 20-task target, but the
+last spans 1.061278 to 5 bits: precision is gained at the expense of resolution,
+and differences inside that range cannot be inferred from its pooled rate.
+
+The third plot shows path entropy and original-task button-choice cost jointly.
+Tasks with identical metric pairs after rounding each coordinate to six decimals
+form one bubble. Bubble area is proportional to task count; color gives the
+observed success fraction on a fixed 0%-100% scale. There is no jitter. There are
+98 metric pairs, including 65 singleton pairs and 13 pairs with both successful
+and failed trials. Small bubbles remain uncertain, including singleton bubbles
+colored 0% or 100%; this plot reveals joint outcomes rather than supplying a
+reliable success-probability estimate at every point.
+
+Entropy values, per-task button-choice costs and original success labels have
+not changed in this plotting update. No new model evaluation was performed.
+
+For these 200 tasks, entropy ranges from 0 to 5 bits; 24 scores change from
+the previous metric. There are 2,357 enumerated representative states, of which
+2,345 are solvable. An independent calculation matched every task's entropy,
+path count, valid probability mass, button counts and choice cost; 43 relevant
+interpreter and entropy tests passed. The default fixed-bin results are:
+
+    Entropy (bits)   Successful / evaluated    Success rate    95% Wilson interval
+    0                      77 / 94                81.91%        72.93%-88.39%
+    (0.5, 1]               14 / 55                25.45%        15.81%-38.30%
+    (1, 1.5]                5 / 12                41.67%        19.33%-68.05%
+    (1.5, 2]                7 / 22                31.82%        16.36%-52.68%
+    (2, 3]                  0 / 11                 0.00%         0.00%-25.88%
+    (3, 4]                  0 /  2                 0.00%         0.00%-65.76%
+    (4, 5]                  0 /  4                 0.00%         0.00%-48.99%
+
+There are eight defined intervals, including zero, and seven contain tasks.
+The only empty interval is (0, 0.5]. The count-pooled results are:
+
+    Observed entropy range  Successful / evaluated  Success rate  95% Wilson interval
+    0                              77 / 94             81.91%     72.93%-88.39%
+    0.811278-0.954434                 7 / 20             35.00%     18.12%-56.71%
+    1                               7 / 35             20.00%     10.04%-35.89%
+    1.061278-5                     12 / 51             23.53%     14.00%-36.76%
+
+The small numbers in the upper groups limit precision. Zero successes here
+does not establish that a model cannot solve tasks at those entropy values.
+
+Outputs include metrics_per_task.csv (entropy, outcome, observed queue sizes,
+correct action counts and choice cost), path_distributions.jsonl (exact path
+probabilities), and analysis.json (provenance, per-task results and all grouped
+results). The three plot/table sets are:
+
+    success_by_entropy.csv, .png, .pdf: fixed bins and Wilson intervals
+    success_by_entropy_pooled.csv, .png, .pdf: count-pooled groups and intervals
+    entropy_vs_button_choice.csv, .png, .pdf: joint metric pairs and outcomes
+
+Reproduce from the repository root:
+
+integrations/seeclick/.venv/bin/python scripts/evaluate_path_entropy.py \
+  runs/seeclick-800-devicefix-dev runs/seeclick-800-devicefix-test \
+  --output reports/seeclick-800-workload-entropy --low-entropy-bin-width 0.5
+
+The default is now 0.5, so that bin-width option can be omitted. Use
+--low-entropy-bin-width 0.1 for the previous fine grouping, or 1 for the earlier
+coarse grouping. This option affects only the fixed-bin chart. Use --prior
+reference with a separate output directory for the earlier uniform queue-length
+metric. Neither calculation requires a GPU, browser, API key or paid inference.

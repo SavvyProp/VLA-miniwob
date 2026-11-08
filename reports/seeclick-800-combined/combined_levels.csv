@@ -1,0 +1,7 @@
+level,title,description,dev_successes,dev_tasks,test_successes,test_tasks,successes,tasks,success_rate_percent
+0,Atomic action,"Perform one basic operation, such as pressing a button.",17,17,17,17,34,34,100.0
+1,Sequence,Perform several actions in a specified order.,17,17,13,17,30,34,88.23529411764706
+2,Conditional,Choose actions using a visible if/else condition.,6,17,3,17,9,34,26.470588235294116
+3,Repetition and stopping,"Repeat a fixed count, while / until, or for each item.",12,17,9,17,21,34,61.76470588235294
+4,Branches with loops,Combine conditional decisions with repetition.,4,16,1,16,5,32,15.625
+5,Nested control flow,"Execute loops within loops, sometimes with branches.",2,16,2,16,4,32,12.5

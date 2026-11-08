@@ -1,0 +1,19 @@
+{
+  "level": 2,
+  "title": "Conditional",
+  "episode_id": "L2-8327bdce47910581",
+  "family": "visible_branch",
+  "split": "dev",
+  "success": false,
+  "clicks": 1,
+  "instruction": "If the value of \"Maple\" is at least 2, execute [Press \"Coral\"]; otherwise execute [Press \"Violet\"]. When the whole script is complete, click Done. Do not perform any extra actions.",
+  "source_attempt": "runs/seeclick-800-devicefix-dev/attempts/68fbf117ff0d830ddd901963-001",
+  "video_kind": "screenshot replay with fixed timing and recorded click markers",
+  "seconds_per_click": 1.6,
+  "final_frame_seconds": 2.4,
+  "prompt_note": "First-step model-format prompt reconstructed with the exported image path",
+  "selection_note": "Selected illustrative rollout, not a performance sample",
+  "output_subdirectory": "L2/failure",
+  "failure_reason": "wrong_action",
+  "failure_explanation": "Pressed Violet at step 1 although Maple was 3, so the condition required Coral."
+}

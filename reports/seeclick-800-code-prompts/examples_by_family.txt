@@ -1,0 +1,408 @@
+Code-like prompts from the existing 800/100/100 task manifest
+One example per family; all 1,000 prompts are in all_tasks.jsonl.
+These are static instructions. No demonstrations were recollected.
+
+L0: single_button (L0-f324ae7fa0bedc26, train)
+Original:
+Press "Violet". When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+Click button "Violet" once.
+Click Done.
+
+------------------------------------------------------------------------
+
+L0: single_counter (L0-a236be127bcb5ce3, train)
+Original:
+Click + on "Olive" once. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+Click + Increase on counter "Olive" once.
+Click Done.
+
+------------------------------------------------------------------------
+
+L0: single_toggle (L0-059715f136c9d980, train)
+Original:
+Toggle "Indigo" once. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+Toggle checkbox "Indigo" once.
+Click Done.
+
+------------------------------------------------------------------------
+
+L1: mixed_controls (L1-8c8a396da5d0efbd, train)
+Original:
+In order: [Press "Indigo"]; then [Click + on "Silver" once]; then [Press "Maple"]; then [Toggle "Olive" once]; then [Click + on "Silver" once]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+Click button "Indigo" once.
+Click + Increase on counter "Silver" once.
+Click button "Maple" once.
+Toggle checkbox "Olive" once.
+Click + Increase on counter "Silver" once.
+Click Done.
+
+------------------------------------------------------------------------
+
+L1: ordered_buttons (L1-9ffabf95b7d6b380, train)
+Original:
+In order: [Press "Olive"]; then [Press "Olive"]; then [Press "Olive"]; then [Press "Cedar"]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+Click button "Olive" once.
+Click button "Olive" once.
+Click button "Olive" once.
+Click button "Cedar" once.
+Click Done.
+
+------------------------------------------------------------------------
+
+L2: branch_sequence (L2-d0bfbbaa848a654d, train)
+Original:
+If the value of "Silver" does not equal "ready", execute [In order: [Press "Maple"]; then [Press "Olive"]]; otherwise execute [In order: [Press "Olive"]; then [Click + on "Amber" once]]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+
+IF status "Silver" != "ready":
+    Click button "Maple" once.
+    Click button "Olive" once.
+ELSE:
+    Click button "Olive" once.
+    Click + Increase on counter "Amber" once.
+END IF
+Click Done.
+
+------------------------------------------------------------------------
+
+L2: compound_branch (L2-fcdcfef2335526b1, train)
+Original:
+If (the value of "Amber" does not equal "ready" OR the checked state of "Olive" equals checked), execute [Press "Coral"]; otherwise execute [Press "Maple"]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+
+IF (status "Amber" != "ready" OR checkbox "Olive" is checked):
+    Click button "Coral" once.
+ELSE:
+    Click button "Maple" once.
+END IF
+Click Done.
+
+------------------------------------------------------------------------
+
+L2: visible_branch (L2-842916b98be133dd, train)
+Original:
+If the value of "Olive" equals "ready", execute [Press "Maple"]; otherwise execute [Press "Coral"]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+
+IF status "Olive" == "ready":
+    Click button "Maple" once.
+ELSE:
+    Click button "Coral" once.
+END IF
+Click Done.
+
+------------------------------------------------------------------------
+
+L3: counted_repeat (L3-4b5d1e7ac3a05a1f, train)
+Original:
+Repeat exactly 3 times: [Click + on "Maple" once]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+REPEAT EXACTLY 3 TIMES:
+    Click + Increase on counter "Maple" once.
+END REPEAT
+Click Done.
+
+------------------------------------------------------------------------
+
+L3: foreach (L3-97b781d8eec57bab, train)
+Original:
+For each remaining item in "Indigo", in displayed order, execute [Click Approve for the current item in "Indigo"], then click Next on "Indigo". Stop when no items remain. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+FOR EACH: use the current item, finish its body, then click Next; stop at no items.
+
+FOR EACH REMAINING ITEM IN queue "Indigo", IN DISPLAYED ORDER:
+    Click Approve for the current item in queue "Indigo" once.
+    Click Next on queue "Indigo" once.
+END FOR EACH
+Click Done.
+
+------------------------------------------------------------------------
+
+L3: queue_until (L3-bcb4507f5d1e1726, train)
+Original:
+Until the category of the current item in "Cedar" equals "red", repeat [Click Next on "Cedar" once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Testing a condition does not click or change any control.
+UNTIL: check before the first and every later iteration; stop when true.
+If a queue has no current item, each comparison of an item field is FALSE, including !=.
+
+UNTIL category of current item in queue "Cedar" == "red":
+    Click Next on queue "Cedar" once.
+END UNTIL
+Click Done.
+
+------------------------------------------------------------------------
+
+L3: until_counter (L3-4f5b03c8766f0e0f, train)
+Original:
+Until the value of "Violet" is at most 1, repeat [Click − on "Violet" once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Testing a condition does not click or change any control.
+UNTIL: check before the first and every later iteration; stop when true.
+
+UNTIL counter "Violet" <= 1:
+    Click − Decrease on counter "Violet" once.
+END UNTIL
+Click Done.
+
+------------------------------------------------------------------------
+
+L3: while_counter (L3-d24f8e4df60a3b38, train)
+Original:
+While the value of "Indigo" is less than 4, repeat [Click + on "Indigo" once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Testing a condition does not click or change any control.
+WHILE: check before the first and every later iteration; stop when false.
+
+WHILE counter "Indigo" < 4:
+    Click + Increase on counter "Indigo" once.
+END WHILE
+Click Done.
+
+------------------------------------------------------------------------
+
+L4: foreach_if (L4-c440c4c7bdb4c81b, train)
+Original:
+For each remaining item in "Coral", in displayed order, execute [If the category of the current item in "Coral" equals "blue", execute [Click Approve for the current item in "Coral"]; otherwise execute [Click Reject for the current item in "Coral"]], then click Next on "Coral". Stop when no items remain. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+FOR EACH: use the current item, finish its body, then click Next; stop at no items.
+If a queue has no current item, each comparison of an item field is FALSE, including !=.
+
+FOR EACH REMAINING ITEM IN queue "Coral", IN DISPLAYED ORDER:
+    IF category of current item in queue "Coral" == "blue":
+        Click Approve for the current item in queue "Coral" once.
+    ELSE:
+        Click Reject for the current item in queue "Coral" once.
+    END IF
+    Click Next on queue "Coral" once.
+END FOR EACH
+Click Done.
+
+------------------------------------------------------------------------
+
+L4: if_loop (L4-18bb4371095f985a, train)
+Original:
+If the value of "Olive" equals "waiting", execute [Repeat exactly 2 times: [Click + on "Cedar" once]]; otherwise execute [Until the value of "Cedar" is at least 5, repeat [Click + on "Cedar" once]. Check the condition before every iteration]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+UNTIL: check before the first and every later iteration; stop when true.
+
+IF status "Olive" == "waiting":
+    REPEAT EXACTLY 2 TIMES:
+        Click + Increase on counter "Cedar" once.
+    END REPEAT
+ELSE:
+    UNTIL counter "Cedar" >= 5:
+        Click + Increase on counter "Cedar" once.
+    END UNTIL
+END IF
+Click Done.
+
+------------------------------------------------------------------------
+
+L4: repeat_if (L4-d9dbb5c4e6eab024, train)
+Original:
+Repeat exactly 0 times: [In order: [If the checked state of "Olive" equals checked, execute [Click + on "Maple" once]; otherwise execute [Press "Silver"]]; then [Toggle "Olive" once]]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+
+REPEAT EXACTLY 0 TIMES:
+    IF checkbox "Olive" is checked:
+        Click + Increase on counter "Maple" once.
+    ELSE:
+        Click button "Silver" once.
+    END IF
+    Toggle checkbox "Olive" once.
+END REPEAT
+Click Done.
+
+------------------------------------------------------------------------
+
+L4: while_if (L4-dad6343740956d27, train)
+Original:
+While the value of "Violet" is less than 4, repeat [In order: [If the checked state of "Silver" equals unchecked, execute [Press "Maple"]; otherwise execute [Press "Coral"]]; then [Toggle "Silver" once]; then [Click + on "Violet" once]]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+WHILE: check before the first and every later iteration; stop when false.
+
+WHILE counter "Violet" < 4:
+    IF checkbox "Silver" is unchecked:
+        Click button "Maple" once.
+    ELSE:
+        Click button "Coral" once.
+    END IF
+    Toggle checkbox "Silver" once.
+    Click + Increase on counter "Violet" once.
+END WHILE
+Click Done.
+
+------------------------------------------------------------------------
+
+L5: branch_nested_loop (L5-afd3de54cfe542d3, train)
+Original:
+If the checked state of "Coral" does not equal checked, execute [Repeat exactly 2 times: [Repeat exactly 3 times: [Press "Amber"]]]; otherwise execute [Repeat exactly 2 times: [Repeat exactly 2 times: [Press "Silver"]]]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+
+IF checkbox "Coral" is unchecked:
+    REPEAT EXACTLY 2 TIMES:
+        REPEAT EXACTLY 3 TIMES:
+            Click button "Amber" once.
+        END REPEAT
+    END REPEAT
+ELSE:
+    REPEAT EXACTLY 2 TIMES:
+        REPEAT EXACTLY 2 TIMES:
+            Click button "Silver" once.
+        END REPEAT
+    END REPEAT
+END IF
+Click Done.
+
+------------------------------------------------------------------------
+
+L5: foreach_repeat_if (L5-c074889b3fe5edb1, train)
+Original:
+For each remaining item in "Violet", in displayed order, execute [In order: [Repeat exactly 1 times: [If the category of the current item in "Violet" equals "blue", execute [Toggle "Olive" once]; otherwise execute [Press "Maple"]]]; then [Click Approve for the current item in "Violet"]], then click Next on "Violet". Stop when no items remain. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+FOR EACH: use the current item, finish its body, then click Next; stop at no items.
+If a queue has no current item, each comparison of an item field is FALSE, including !=.
+
+FOR EACH REMAINING ITEM IN queue "Violet", IN DISPLAYED ORDER:
+    REPEAT EXACTLY 1 TIMES:
+        IF category of current item in queue "Violet" == "blue":
+            Toggle checkbox "Olive" once.
+        ELSE:
+            Click button "Maple" once.
+        END IF
+    END REPEAT
+    Click Approve for the current item in queue "Violet" once.
+    Click Next on queue "Violet" once.
+END FOR EACH
+Click Done.
+
+------------------------------------------------------------------------
+
+L5: nested_repeat (L5-dd8a0020a2a09ab2, train)
+Original:
+Repeat exactly 1 times: [In order: [Repeat exactly 3 times: [Click + on "Olive" once]]; then [Press "Indigo"]]. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+
+REPEAT EXACTLY 1 TIMES:
+    REPEAT EXACTLY 3 TIMES:
+        Click + Increase on counter "Olive" once.
+    END REPEAT
+    Click button "Indigo" once.
+END REPEAT
+Click Done.
+
+------------------------------------------------------------------------
+
+L5: until_repeat_if (L5-11a3ec983daffb72, train)
+Original:
+Until the value of "Olive" is at least 0, repeat [In order: [Repeat exactly 3 times: [In order: [If the checked state of "Maple" equals checked, execute [Press "Amber"]; otherwise execute [Press "Violet"]]; then [Toggle "Maple" once]]]; then [Click + on "Olive" once]]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+UNTIL: check before the first and every later iteration; stop when true.
+
+UNTIL counter "Olive" >= 0:
+    REPEAT EXACTLY 3 TIMES:
+        IF checkbox "Maple" is checked:
+            Click button "Amber" once.
+        ELSE:
+            Click button "Violet" once.
+        END IF
+        Toggle checkbox "Maple" once.
+    END REPEAT
+    Click + Increase on counter "Olive" once.
+END UNTIL
+Click Done.
+
+------------------------------------------------------------------------
+
+L5: while_repeat (L5-92bb05ccafb75b4b, train)
+Original:
+While the value of "Indigo" is less than 3, repeat [In order: [Repeat exactly 2 times: [Press "Cedar"]]; then [Click + on "Indigo" once]]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.
+
+Code-like:
+Follow the script in order. Perform only the listed clicks.
+Testing a condition does not click or change any control.
+WHILE: check before the first and every later iteration; stop when false.
+
+WHILE counter "Indigo" < 3:
+    REPEAT EXACTLY 2 TIMES:
+        Click button "Cedar" once.
+    END REPEAT
+    Click + Increase on counter "Indigo" once.
+END WHILE
+Click Done.
+
+------------------------------------------------------------------------

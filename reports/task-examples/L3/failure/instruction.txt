@@ -1,0 +1,1 @@
+While the value of "Maple" is less than 8, repeat [Click + on "Maple" once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.

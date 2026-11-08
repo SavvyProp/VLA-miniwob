@@ -1,0 +1,1 @@
+While the value of "Maple" is less than 1, repeat [In order: [If the checked state of "Indigo" equals checked, execute [Press "Silver"]; otherwise execute [Press "Amber"]]; then [Toggle "Indigo" once]; then [Click + on "Maple" once]]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.

@@ -223,8 +223,43 @@ def test_collection_source_exports_once_and_resume_keeps_snapshot(stack, tmp_pat
     training.train_seeclick(source, output, config(), prepare_only=True)
     training.train_seeclick(source, output, config(), resume=True)
     assert len(calls) == 1
-    assert calls[0][2] == {"format": "seeclick", "allow_oracle": False}
+    assert calls[0][2] == {
+        "format": "seeclick", "allow_oracle": False, "prompt_style": "natural",
+    }
     assert read_json(output / training.METADATA_FILE)["dataset_path"] == str(output / "dataset")
+
+
+def test_code_collection_export_records_style_and_resume_inherits_it(stack, tmp_path):
+    from test_script_export import fixture_run
+
+    source, _ = fixture_run(tmp_path)
+    output = tmp_path / "training"
+    training.train_seeclick(
+        source, output, config(max_length=2048), prepare_only=True, prompt_style="code",
+    )
+    metadata_path = output / training.METADATA_FILE
+    before = metadata_path.read_bytes()
+    metadata = read_json(metadata_path)
+    assert metadata["prompt_style"] == "code"
+    assert metadata["dataset"]["metadata"]["prompt_style"] == "code"
+    assert metadata["identity"]["instruction_version"] == "scriptwob-code-v1"
+    assert stack.models == []
+    with pytest.raises(ValueError, match="Frozen dataset prompt style differs"):
+        training.train_seeclick(
+            source, output, config(max_length=2048), resume=True, prompt_style="natural",
+        )
+    assert metadata_path.read_bytes() == before
+    training.train_seeclick(source, output, config(max_length=2048), resume=True)
+    assert read_json(output / "adapter" / training.METADATA_FILE)["prompt_style"] == "code"
+
+
+def test_export_style_override_requires_reformat_before_creating_training_output(stack, tmp_path):
+    source = make_export(tmp_path / "data")
+    output = tmp_path / "training"
+    with pytest.raises(ValueError, match="reformat-seeclick"):
+        training.train_seeclick(source, output, config(), prompt_style="code")
+    assert not output.exists()
+    assert stack.models == []
 
 
 def test_training_records_failed_preflight_without_loading_weights(stack, tmp_path):

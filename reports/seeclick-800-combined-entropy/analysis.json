@@ -1,0 +1,1916 @@
+{
+  "tasks": 200,
+  "successes": 103,
+  "minimum_combined_score_bits": 2.0,
+  "maximum_combined_score_bits": 59.86917501586544,
+  "formula": "combined_score_bits = entropy_bits + original_choice_bits",
+  "weights": {
+    "path_entropy": 1,
+    "button_choice_cost": 1
+  },
+  "path_entropy_formula": "H(B | fixed script, observed queue lengths/cursors, solvable reference state) = -sum_b p(b) log2 p(b)",
+  "conditioning_scope": "Queue sizes, cursors and existing record metadata fixed; remaining relevant item category/status vary. Counter prior remains 0..3; toggles and status widgets vary.",
+  "button_choice_definition": "sum_t log2(number of enabled semantic buttons before correct action t), including Done; evaluated on the original oracle trace; reported separately from entropy",
+  "interpretation": "Unweighted additive difficulty score. The components may overlap; this is not joint Shannon entropy or a model success probability. No independence assumed.",
+  "protocol": "Same saved model outcomes; button counts from complete correct oracle traces.",
+  "binning": {
+    "initial_width_bits": 5,
+    "minimum_tasks": 20,
+    "right_closed": true,
+    "first_bin_includes_zero": true,
+    "roundoff_tolerance_bits": 1e-10,
+    "method": "Accumulate adjacent fixed-width bins until minimum count, then merge an undersized final group backward. Binning ignores success labels."
+  },
+  "intervals": "Approximate 95% Wilson intervals; related templates limit independence.",
+  "source_analysis": "reports/seeclick-800-workload-entropy/analysis.json",
+  "source_analysis_sha256": "4840921da4a28902d42c34ee08c46b8b73f06a43f43432b037fdcd2b2ade3ea2",
+  "script_sha256": "b2b2e8ad9e3cb6e4466fd3c53fbb63427373813ded7d1f868e9b041597209ed1",
+  "groups": [
+    {
+      "score_bin": "[0, 5]",
+      "lower_bits": 0,
+      "upper_bits": 5,
+      "minimum_observed_score_bits": 2.0,
+      "maximum_observed_score_bits": 5.0,
+      "tasks": 73,
+      "successes": 57,
+      "success_rate_percent": 78.08219178082192,
+      "wilson_95_lower_percent": 67.3227338877521,
+      "wilson_95_upper_percent": 86.03387936404931,
+      "meets_minimum": true,
+      "mean_path_entropy_bits": 0.452480507926655,
+      "mean_button_choice_bits": 3.227838397552218,
+      "L0_tasks": 34,
+      "L1_tasks": 5,
+      "L2_tasks": 16,
+      "L3_tasks": 12,
+      "L4_tasks": 2,
+      "L5_tasks": 4
+    },
+    {
+      "score_bin": "(5, 10]",
+      "lower_bits": 5,
+      "upper_bits": 10,
+      "minimum_observed_score_bits": 5.334962500721156,
+      "maximum_observed_score_bits": 9.509775004326936,
+      "tasks": 65,
+      "successes": 35,
+      "success_rate_percent": 53.84615384615385,
+      "wilson_95_lower_percent": 41.85339926647454,
+      "wilson_95_upper_percent": 65.40966587719579,
+      "meets_minimum": true,
+      "mean_path_entropy_bits": 0.6719526484264654,
+      "mean_button_choice_bits": 6.805959392683941,
+      "L0_tasks": 0,
+      "L1_tasks": 23,
+      "L2_tasks": 18,
+      "L3_tasks": 10,
+      "L4_tasks": 5,
+      "L5_tasks": 9
+    },
+    {
+      "score_bin": "(10, 15]",
+      "lower_bits": 10,
+      "upper_bits": 15,
+      "minimum_observed_score_bits": 10.4363374401353,
+      "maximum_observed_score_bits": 15.0,
+      "tasks": 30,
+      "successes": 6,
+      "success_rate_percent": 20.0,
+      "wilson_95_lower_percent": 9.50510717728987,
+      "wilson_95_upper_percent": 37.30569641314825,
+      "meets_minimum": true,
+      "mean_path_entropy_bits": 0.9852130207431888,
+      "mean_button_choice_bits": 11.865030468451652,
+      "L0_tasks": 0,
+      "L1_tasks": 6,
+      "L2_tasks": 0,
+      "L3_tasks": 6,
+      "L4_tasks": 13,
+      "L5_tasks": 5
+    },
+    {
+      "score_bin": "(15, 60]",
+      "lower_bits": 15,
+      "upper_bits": 60,
+      "minimum_observed_score_bits": 15.720671786825555,
+      "maximum_observed_score_bits": 59.86917501586544,
+      "tasks": 32,
+      "successes": 5,
+      "success_rate_percent": 15.625,
+      "wilson_95_lower_percent": 6.8644202825057095,
+      "wilson_95_upper_percent": 31.75414959753039,
+      "meets_minimum": true,
+      "mean_path_entropy_bits": 1.9937969725041311,
+      "mean_button_choice_bits": 24.30759428225926,
+      "L0_tasks": 0,
+      "L1_tasks": 0,
+      "L2_tasks": 0,
+      "L3_tasks": 6,
+      "L4_tasks": 12,
+      "L5_tasks": 14
+    }
+  ],
+  "tasks_detail": [
+    {
+      "episode_id": "L0-16ffea73a822b988",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L0-a91d92113e5814aa",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L0-af86eff2b303b9cd",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L0-caeab67bcd05d880",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L0-da9e3b9d78c9ff6b",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L0-dcd353e0dbf62dbe",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L3-7d109beb285fa46e",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L4-16e6baa27d7420ff",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.0
+    },
+    {
+      "episode_id": "L3-cb28595f0d330ab6",
+      "split": "dev",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 2.321928094887362,
+      "combined_score_bits": 2.321928094887362
+    },
+    {
+      "episode_id": "L3-58a9b1ab8f158d86",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.811278124459133
+    },
+    {
+      "episode_id": "L3-ab7daebc8ce08e77",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 2.811278124459133
+    },
+    {
+      "episode_id": "L1-5de340e1d09cf81c",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.0,
+      "combined_score_bits": 3.0
+    },
+    {
+      "episode_id": "L0-00594092c38379c1",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-052eead49bde12bf",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-08f86057f8f9c8a7",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-1e19cc068181ac06",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-5471e8f845d6ca05",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-57841b673a650643",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-6bf9be39950c2584",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-6f76705cc400e1f8",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-8095d65baa150806",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-89e2bdab0d800b92",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-90b3a86aa81f1da7",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-a3b07d5a7da57306",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-a78dc67c2777ad97",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-b6e5aaf679960bbf",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-bfd7d4fc5282aaa9",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-c4a8cb8d1b57bd6a",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-d647d7ae3907a407",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L0-efe9976e49768bcb",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L3-755b245ceda35097",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 3.169925001442312
+    },
+    {
+      "episode_id": "L3-68a0bea3a6515ab0",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.9182958340544896,
+      "original_choice_bits": 2.321928094887362,
+      "combined_score_bits": 3.2402239289418517
+    },
+    {
+      "episode_id": "L3-91d7617bf0aa75bc",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 3.5
+    },
+    {
+      "episode_id": "L3-cd446b6d47e50cb4",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 3.5
+    },
+    {
+      "episode_id": "L5-5aef90b702cc12e2",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 2.0,
+      "combined_score_bits": 3.5
+    },
+    {
+      "episode_id": "L0-3392f52b0985810d",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.584962500721156,
+      "combined_score_bits": 3.584962500721156
+    },
+    {
+      "episode_id": "L0-690b9dc12f7ee9db",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.584962500721156,
+      "combined_score_bits": 3.584962500721156
+    },
+    {
+      "episode_id": "L0-6bcffde1c51515f1",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 3.584962500721156,
+      "combined_score_bits": 3.584962500721156
+    },
+    {
+      "episode_id": "L3-1d5b27dcf5107474",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 1.584962500721156,
+      "combined_score_bits": 3.584962500721156
+    },
+    {
+      "episode_id": "L3-360cf4e667bb2976",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 1.584962500721156,
+      "combined_score_bits": 3.584962500721156
+    },
+    {
+      "episode_id": "L3-de78dbd62cb6dd1f",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 1.584962500721156,
+      "combined_score_bits": 3.584962500721156
+    },
+    {
+      "episode_id": "L5-236039cb87597751",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 2.321928094887362,
+      "combined_score_bits": 3.821928094887362
+    },
+    {
+      "episode_id": "L0-2a6b12be13381daf",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L0-4be7bbae9ccc614a",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L0-6b83056253767dfa",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L0-9180b5530e8ad93e",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L0-becee5b494df2511",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L0-de4b08d79751a71f",
+      "split": "dev",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L0-fbbdad3530c7c140",
+      "split": "test",
+      "level": 0,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.0
+    },
+    {
+      "episode_id": "L2-2f27d162b3ddd5a1",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 4.169925001442312
+    },
+    {
+      "episode_id": "L2-be4aa3d659c23281",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 3.169925001442312,
+      "combined_score_bits": 4.169925001442312
+    },
+    {
+      "episode_id": "L4-00f2530ffb9fa64c",
+      "split": "dev",
+      "level": 4,
+      "success": 1,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 2.321928094887362,
+      "combined_score_bits": 4.321928094887362
+    },
+    {
+      "episode_id": "L5-486d315c6becc1d8",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 2.584962500721156,
+      "combined_score_bits": 4.584962500721156
+    },
+    {
+      "episode_id": "L1-70673e74fb8c82c5",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.754887502163468,
+      "combined_score_bits": 4.754887502163468
+    },
+    {
+      "episode_id": "L1-7ce093857873fb9f",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.754887502163468,
+      "combined_score_bits": 4.754887502163468
+    },
+    {
+      "episode_id": "L1-da3b880efbe0e3b1",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.754887502163468,
+      "combined_score_bits": 4.754887502163468
+    },
+    {
+      "episode_id": "L1-e31d5d7e73fce434",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.754887502163468,
+      "combined_score_bits": 4.754887502163468
+    },
+    {
+      "episode_id": "L5-5c0f3cd770f62c01",
+      "split": "dev",
+      "level": 5,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.754887502163468,
+      "combined_score_bits": 4.754887502163468
+    },
+    {
+      "episode_id": "L2-0aefd7d4f531c510",
+      "split": "dev",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-1477fb967df7aa35",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-52931865cda1924f",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-66c4a9b756e643ef",
+      "split": "dev",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-8ac73f58eee46417",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-b86cbd175638d191",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-c69591a811d9aeba",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L2-e558aee30a472bdb",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 4.8112781244591325
+    },
+    {
+      "episode_id": "L3-e971c39677a57f88",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 4.906890595608518,
+      "combined_score_bits": 4.906890595608518
+    },
+    {
+      "episode_id": "L2-1b1f3402a33fdafc",
+      "split": "test",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 5.0
+    },
+    {
+      "episode_id": "L2-40c9d0c3d0feb88c",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 5.0
+    },
+    {
+      "episode_id": "L2-4df4a76a9b66c61a",
+      "split": "dev",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 5.0
+    },
+    {
+      "episode_id": "L2-9e3a128731a696e1",
+      "split": "test",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 5.0
+    },
+    {
+      "episode_id": "L2-b8838c679766a402",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 5.0
+    },
+    {
+      "episode_id": "L2-c54e196d96e9b883",
+      "split": "dev",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 5.0
+    },
+    {
+      "episode_id": "L4-eeed1cc4a4af48f8",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 2.75,
+      "original_choice_bits": 2.584962500721156,
+      "combined_score_bits": 5.334962500721156
+    },
+    {
+      "episode_id": "L2-3544c2796b76ea20",
+      "split": "dev",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 5.455134314233857
+    },
+    {
+      "episode_id": "L2-54ad5402f0c3da15",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 5.455134314233857
+    },
+    {
+      "episode_id": "L2-ba50356bae846e8b",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 5.455134314233857
+    },
+    {
+      "episode_id": "L3-b892898b25bc01dd",
+      "split": "dev",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 3.584962500721156,
+      "combined_score_bits": 5.584962500721156
+    },
+    {
+      "episode_id": "L2-df804630bfa09028",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.954434002924965,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 5.5982901926996895
+    },
+    {
+      "episode_id": "L2-8327bdce47910581",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 5.643856189774724
+    },
+    {
+      "episode_id": "L4-144551d7773f4c3a",
+      "split": "dev",
+      "level": 4,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 4.906890595608518,
+      "combined_score_bits": 5.906890595608518
+    },
+    {
+      "episode_id": "L2-22ee9488e5ec9f40",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 5.169925001442312,
+      "combined_score_bits": 5.981203125901445
+    },
+    {
+      "episode_id": "L1-0a19171ecfe1108e",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 6.0
+    },
+    {
+      "episode_id": "L1-cfd9edf86ee0ca07",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 6.0
+    },
+    {
+      "episode_id": "L3-3be5bc7f079e504d",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 4.0,
+      "combined_score_bits": 6.0
+    },
+    {
+      "episode_id": "L4-55afeb4d41e47903",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 6.143856189774724
+    },
+    {
+      "episode_id": "L1-de6909a018a763d6",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.321928094887362,
+      "combined_score_bits": 6.321928094887362
+    },
+    {
+      "episode_id": "L1-19dfbc6f50a29976",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L1-381a701a98d969c0",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L1-60020c5134b92762",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L1-7af7cc26d9719d20",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L1-e2f22028c83a45ce",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L1-e4f72f76ac4d2915",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L1-f2bfada1ca25f4a1",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.339850002884624,
+      "combined_score_bits": 6.339850002884624
+    },
+    {
+      "episode_id": "L3-56b600a7598dee70",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 1.7929059878062301,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 6.436762177580954
+    },
+    {
+      "episode_id": "L3-dd91d704e902e7bd",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 1.7929059878062301,
+      "original_choice_bits": 4.643856189774724,
+      "combined_score_bits": 6.436762177580954
+    },
+    {
+      "episode_id": "L1-b230aef5703dad00",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 6.965784284662087
+    },
+    {
+      "episode_id": "L5-aff7cf987501f3c9",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 6.965784284662087
+    },
+    {
+      "episode_id": "L2-a772503b00719996",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 7.0
+    },
+    {
+      "episode_id": "L5-3643fb50fcc2a2a4",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 7.0,
+      "combined_score_bits": 7.0
+    },
+    {
+      "episode_id": "L2-f4d8bcfc56a8f219",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 6.321928094887362,
+      "combined_score_bits": 7.321928094887362
+    },
+    {
+      "episode_id": "L3-04d41309c225f170",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 7.5
+    },
+    {
+      "episode_id": "L4-a2cf43d887dd4570",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 7.5
+    },
+    {
+      "episode_id": "L5-cdc4834393344d39",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 7.5
+    },
+    {
+      "episode_id": "L5-bbb1b2a9c4b64201",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 6.643856189774724,
+      "combined_score_bits": 7.643856189774724
+    },
+    {
+      "episode_id": "L2-015b433eeacf7254",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 7.7770624091212195
+    },
+    {
+      "episode_id": "L1-236e4ba980d22127",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 7.92481250360578,
+      "combined_score_bits": 7.92481250360578
+    },
+    {
+      "episode_id": "L1-377fed92679291ea",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 7.92481250360578,
+      "combined_score_bits": 7.92481250360578
+    },
+    {
+      "episode_id": "L1-3fb55981a3dfae89",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 7.92481250360578,
+      "combined_score_bits": 7.92481250360578
+    },
+    {
+      "episode_id": "L1-59037a5e53afefb4",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 7.92481250360578,
+      "combined_score_bits": 7.92481250360578
+    },
+    {
+      "episode_id": "L5-136e79ad1899e8d2",
+      "split": "test",
+      "level": 5,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 7.92481250360578,
+      "combined_score_bits": 7.92481250360578
+    },
+    {
+      "episode_id": "L2-057574c232a95822",
+      "split": "dev",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 7.965784284662087
+    },
+    {
+      "episode_id": "L2-2751b72adcacdf41",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 7.965784284662087
+    },
+    {
+      "episode_id": "L2-5ff4d9a4d38713c5",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 7.965784284662087
+    },
+    {
+      "episode_id": "L3-a42ffb50b2e7909b",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 8.0,
+      "combined_score_bits": 8.0
+    },
+    {
+      "episode_id": "L3-bbdfd83ce9c35685",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 6.0,
+      "combined_score_bits": 8.0
+    },
+    {
+      "episode_id": "L5-9fee4b29a94101e7",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 8.0,
+      "combined_score_bits": 8.0
+    },
+    {
+      "episode_id": "L5-f1912cbbdb20a398",
+      "split": "test",
+      "level": 5,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 8.0,
+      "combined_score_bits": 8.0
+    },
+    {
+      "episode_id": "L2-1111e52a730ae7e0",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 7.22881869049588,
+      "combined_score_bits": 8.228818690495881
+    },
+    {
+      "episode_id": "L2-4d0503df6d5d3366",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 7.22881869049588,
+      "combined_score_bits": 8.228818690495881
+    },
+    {
+      "episode_id": "L2-c2750325c210c833",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 7.22881869049588,
+      "combined_score_bits": 8.228818690495881
+    },
+    {
+      "episode_id": "L2-c6d8db4f81dd2e5d",
+      "split": "test",
+      "level": 2,
+      "success": 1,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 7.22881869049588,
+      "combined_score_bits": 8.228818690495881
+    },
+    {
+      "episode_id": "L3-4d3b6fae92cd559a",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 1.3787834934861753,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 8.344567778148262
+    },
+    {
+      "episode_id": "L3-0b07fc1b1281c445",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 1.640223928941852,
+      "original_choice_bits": 6.965784284662087,
+      "combined_score_bits": 8.606008213603939
+    },
+    {
+      "episode_id": "L2-86b76cefb5f99a05",
+      "split": "dev",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 7.754887502163468,
+      "combined_score_bits": 8.754887502163468
+    },
+    {
+      "episode_id": "L2-bb6cd2837a7fc49a",
+      "split": "test",
+      "level": 2,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 7.754887502163468,
+      "combined_score_bits": 8.754887502163468
+    },
+    {
+      "episode_id": "L3-290d1d560b43fd8b",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 8.813781191217036,
+      "combined_score_bits": 8.813781191217036
+    },
+    {
+      "episode_id": "L5-ba995a5866e4ac71",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 8.0,
+      "combined_score_bits": 9.0
+    },
+    {
+      "episode_id": "L5-bd4f35cc141d16e1",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 8.321928094887362,
+      "combined_score_bits": 9.133206219346494
+    },
+    {
+      "episode_id": "L1-59ee16c71bca36d3",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.287712379549449,
+      "combined_score_bits": 9.287712379549449
+    },
+    {
+      "episode_id": "L1-6f07c7fbcea2edcb",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.287712379549449,
+      "combined_score_bits": 9.287712379549449
+    },
+    {
+      "episode_id": "L1-c1e872b1dff7cb49",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.287712379549449,
+      "combined_score_bits": 9.287712379549449
+    },
+    {
+      "episode_id": "L4-64072c9eda8d4c32",
+      "split": "test",
+      "level": 4,
+      "success": 1,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 8.0,
+      "combined_score_bits": 9.5
+    },
+    {
+      "episode_id": "L1-11dda418d71a852a",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.509775004326936,
+      "combined_score_bits": 9.509775004326936
+    },
+    {
+      "episode_id": "L1-4aafb021f5e54978",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.509775004326936,
+      "combined_score_bits": 9.509775004326936
+    },
+    {
+      "episode_id": "L1-60c73418e7c91dae",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.509775004326936,
+      "combined_score_bits": 9.509775004326936
+    },
+    {
+      "episode_id": "L1-993aaaed7a215b7b",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.509775004326936,
+      "combined_score_bits": 9.509775004326936
+    },
+    {
+      "episode_id": "L1-e3041d8beddabb09",
+      "split": "test",
+      "level": 1,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 9.509775004326936,
+      "combined_score_bits": 9.509775004326936
+    },
+    {
+      "episode_id": "L4-bba50464b9485411",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.6225562489182659,
+      "original_choice_bits": 8.813781191217036,
+      "combined_score_bits": 10.4363374401353
+    },
+    {
+      "episode_id": "L4-2b9c28e331350bca",
+      "split": "dev",
+      "level": 4,
+      "success": 1,
+      "entropy_bits": 1.061278124459133,
+      "original_choice_bits": 9.550746785383243,
+      "combined_score_bits": 10.612024909842376
+    },
+    {
+      "episode_id": "L4-ecfe6e38e1e65edc",
+      "split": "dev",
+      "level": 4,
+      "success": 1,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 10.0,
+      "combined_score_bits": 10.811278124459132
+    },
+    {
+      "episode_id": "L4-441f4f72eb9d5791",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 10.0,
+      "combined_score_bits": 11.0
+    },
+    {
+      "episode_id": "L5-3782473d5d581def",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 11.094737505048093,
+      "combined_score_bits": 11.094737505048093
+    },
+    {
+      "episode_id": "L5-b18054a6273e1376",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 11.287712379549449,
+      "combined_score_bits": 11.287712379549449
+    },
+    {
+      "episode_id": "L5-31b543d1c2274e87",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 10.339850002884624,
+      "combined_score_bits": 11.339850002884624
+    },
+    {
+      "episode_id": "L4-c5a5dc34d9ae59e7",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 9.584962500721156,
+      "combined_score_bits": 11.584962500721156
+    },
+    {
+      "episode_id": "L3-45bdae349ed76ad2",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 10.0,
+      "combined_score_bits": 12.0
+    },
+    {
+      "episode_id": "L3-bbbcc0b16525faba",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 10.0,
+      "combined_score_bits": 12.0
+    },
+    {
+      "episode_id": "L4-ea3a65b6c34f117f",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 10.0,
+      "combined_score_bits": 12.0
+    },
+    {
+      "episode_id": "L4-bb996a6f64cb4988",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 10.339850002884624,
+      "combined_score_bits": 12.339850002884624
+    },
+    {
+      "episode_id": "L4-132bc6dc044d09eb",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 0.8112781244591328,
+      "original_choice_bits": 11.60964047443681,
+      "combined_score_bits": 12.420918598895943
+    },
+    {
+      "episode_id": "L3-81aebb971245b3d8",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 12.720671786825555,
+      "combined_score_bits": 12.720671786825555
+    },
+    {
+      "episode_id": "L3-91c5a54b0b0ee577",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 12.720671786825555,
+      "combined_score_bits": 12.720671786825555
+    },
+    {
+      "episode_id": "L4-2071eff1c9bf57cb",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.5,
+      "original_choice_bits": 11.287712379549449,
+      "combined_score_bits": 12.787712379549449
+    },
+    {
+      "episode_id": "L1-e29ba136a40c0cb7",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 12.92481250360578,
+      "combined_score_bits": 12.92481250360578
+    },
+    {
+      "episode_id": "L4-cb8a05b6381d75c3",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 2.75,
+      "original_choice_bits": 10.339850002884624,
+      "combined_score_bits": 13.089850002884624
+    },
+    {
+      "episode_id": "L1-83e32ded5657f204",
+      "split": "test",
+      "level": 1,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 13.60964047443681,
+      "combined_score_bits": 13.60964047443681
+    },
+    {
+      "episode_id": "L1-37f54547744af4d3",
+      "split": "dev",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 13.931568569324174,
+      "combined_score_bits": 13.931568569324174
+    },
+    {
+      "episode_id": "L1-5533cc7fd715f408",
+      "split": "test",
+      "level": 1,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 13.931568569324174,
+      "combined_score_bits": 13.931568569324174
+    },
+    {
+      "episode_id": "L1-7cd01d49a3477f4f",
+      "split": "test",
+      "level": 1,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 13.931568569324174,
+      "combined_score_bits": 13.931568569324174
+    },
+    {
+      "episode_id": "L1-c97314735f2ff0d9",
+      "split": "test",
+      "level": 1,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 13.931568569324174,
+      "combined_score_bits": 13.931568569324174
+    },
+    {
+      "episode_id": "L3-236e6d08cfe570ea",
+      "split": "test",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 12.0,
+      "combined_score_bits": 14.0
+    },
+    {
+      "episode_id": "L3-745bb87011ad3aa1",
+      "split": "dev",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 12.0,
+      "combined_score_bits": 14.0
+    },
+    {
+      "episode_id": "L4-63e1eeddbdd12d50",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 14.0,
+      "combined_score_bits": 15.0
+    },
+    {
+      "episode_id": "L4-6b254989ab88b529",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 14.0,
+      "combined_score_bits": 15.0
+    },
+    {
+      "episode_id": "L4-d1b87a8e01cccd19",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 14.0,
+      "combined_score_bits": 15.0
+    },
+    {
+      "episode_id": "L5-00de2aca02551413",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 14.0,
+      "combined_score_bits": 15.0
+    },
+    {
+      "episode_id": "L5-38c14636d9b111a8",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 14.0,
+      "combined_score_bits": 15.0
+    },
+    {
+      "episode_id": "L4-602ae420c6387820",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 12.720671786825555,
+      "combined_score_bits": 15.720671786825555
+    },
+    {
+      "episode_id": "L3-4580501cb9f5b14e",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 16.62756238243407,
+      "combined_score_bits": 16.62756238243407
+    },
+    {
+      "episode_id": "L3-7f9044f00b9c857c",
+      "split": "dev",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 16.62756238243407,
+      "combined_score_bits": 16.62756238243407
+    },
+    {
+      "episode_id": "L3-b06a5b75b8ec3462",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 16.62756238243407,
+      "combined_score_bits": 16.62756238243407
+    },
+    {
+      "episode_id": "L4-2a1d3cef54c936a5",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 18.0,
+      "combined_score_bits": 19.0
+    },
+    {
+      "episode_id": "L5-8040abeaeca87352",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 18.094737505048094,
+      "combined_score_bits": 19.094737505048094
+    },
+    {
+      "episode_id": "L4-40ee49d36f972b4c",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 3.2451124978365318,
+      "original_choice_bits": 16.62756238243407,
+      "combined_score_bits": 19.8726748802706
+    },
+    {
+      "episode_id": "L3-3b3a78080fb504c0",
+      "split": "test",
+      "level": 3,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 20.53445297804259,
+      "combined_score_bits": 20.53445297804259
+    },
+    {
+      "episode_id": "L3-3c96bbfe3cf2eeca",
+      "split": "dev",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 20.53445297804259,
+      "combined_score_bits": 20.53445297804259
+    },
+    {
+      "episode_id": "L5-77352b80ec6b060d",
+      "split": "dev",
+      "level": 5,
+      "success": 1,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 20.604512509375027,
+      "combined_score_bits": 20.604512509375027
+    },
+    {
+      "episode_id": "L4-44ebdcbb2767d24a",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 2.75,
+      "original_choice_bits": 18.094737505048094,
+      "combined_score_bits": 20.844737505048094
+    },
+    {
+      "episode_id": "L5-370c00779d9c97dc",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 20.89735285398626,
+      "combined_score_bits": 20.89735285398626
+    },
+    {
+      "episode_id": "L3-dee4b313228e9552",
+      "split": "dev",
+      "level": 3,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 22.0,
+      "combined_score_bits": 22.0
+    },
+    {
+      "episode_id": "L5-84cf92b36381d4c1",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 20.67970000576925,
+      "combined_score_bits": 22.67970000576925
+    },
+    {
+      "episode_id": "L5-3c6a18cddddab264",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 20.89735285398626,
+      "combined_score_bits": 22.89735285398626
+    },
+    {
+      "episode_id": "L4-c5356501a57be3f7",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 22.0,
+      "combined_score_bits": 23.0
+    },
+    {
+      "episode_id": "L4-5d9595e2ea8f1e3f",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 23.264662506490403,
+      "combined_score_bits": 24.264662506490403
+    },
+    {
+      "episode_id": "L4-65a69b1257f10771",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 4.056390622295664,
+      "original_choice_bits": 20.53445297804259,
+      "combined_score_bits": 24.590843600338253
+    },
+    {
+      "episode_id": "L5-ad00a9f073e45594",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 2.0,
+      "original_choice_bits": 23.21928094887362,
+      "combined_score_bits": 25.21928094887362
+    },
+    {
+      "episode_id": "L4-610b5b3ed29a1c46",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 5.0,
+      "original_choice_bits": 20.53445297804259,
+      "combined_score_bits": 25.53445297804259
+    },
+    {
+      "episode_id": "L4-7996104567cb0832",
+      "split": "dev",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 5.0,
+      "original_choice_bits": 20.53445297804259,
+      "combined_score_bits": 25.53445297804259
+    },
+    {
+      "episode_id": "L5-e7e99e1fc06f3562",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 0.0,
+      "original_choice_bits": 26.0,
+      "combined_score_bits": 26.0
+    },
+    {
+      "episode_id": "L4-daa3a15fa67055ce",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 1.0,
+      "original_choice_bits": 27.645484290431334,
+      "combined_score_bits": 28.645484290431334
+    },
+    {
+      "episode_id": "L4-6be2bd01c460b8ef",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 25.84962500721156,
+      "combined_score_bits": 28.84962500721156
+    },
+    {
+      "episode_id": "L4-a62e9201e3a87de0",
+      "split": "test",
+      "level": 4,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 25.84962500721156,
+      "combined_score_bits": 28.84962500721156
+    },
+    {
+      "episode_id": "L5-d807277e7987d1fe",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 2.75,
+      "original_choice_bits": 28.43458750793272,
+      "combined_score_bits": 31.18458750793272
+    },
+    {
+      "episode_id": "L5-64e72e0e9612b12d",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 28.43458750793272,
+      "combined_score_bits": 31.43458750793272
+    },
+    {
+      "episode_id": "L5-54faa001b4ff5ac7",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 4.0,
+      "original_choice_bits": 30.264662506490403,
+      "combined_score_bits": 34.2646625064904
+    },
+    {
+      "episode_id": "L5-307d737ea30ff18c",
+      "split": "dev",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 38.60451250937503,
+      "combined_score_bits": 41.60451250937503
+    },
+    {
+      "episode_id": "L5-30701719ae1e7f12",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 38.77443751081734,
+      "combined_score_bits": 41.77443751081734
+    },
+    {
+      "episode_id": "L5-bac62c8e65cbd235",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 5.0,
+      "original_choice_bits": 41.460797273676405,
+      "combined_score_bits": 46.460797273676405
+    },
+    {
+      "episode_id": "L5-b4533d437994b57d",
+      "split": "test",
+      "level": 5,
+      "success": 0,
+      "entropy_bits": 3.0,
+      "original_choice_bits": 56.86917501586544,
+      "combined_score_bits": 59.86917501586544
+    }
+  ]
+}

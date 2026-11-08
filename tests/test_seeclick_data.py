@@ -123,9 +123,13 @@ def test_oracle_requires_explicit_flag_and_metadata_agreement(tmp_path):
     [
         ({"format": "messages"}, "seeclick"),
         ({"examples": 2}, "count"),
+        ({"episodes": 2}, "episode count"),
         ({"split": "test"}, "training export"),
         ({"data_file": "../test.json"}, "training export"),
         ({"prompt_version": "different-prompt"}, "prompt version"),
+        ({"prompt_style": "unknown"}, "prompt style"),
+        ({"instruction_version": "different-instruction"}, "instruction version"),
+        ({"prompt_style": "code"}, "instruction version"),
     ],
 )
 def test_rejects_wrong_dataset_contract(tmp_path, changes, match):

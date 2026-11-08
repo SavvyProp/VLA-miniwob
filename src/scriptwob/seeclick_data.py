@@ -15,6 +15,7 @@ from typing import Any
 from PIL import Image
 
 from .contracts import ClickAction
+from .prompt_styles import DEFAULT_PROMPT_STYLE, instruction_version, validate_prompt_style
 from .seeclick_prompt import (
     DEFAULT_SYSTEM_MESSAGE,
     MAX_IMAGE_PATH_BYTES,
@@ -73,6 +74,15 @@ def load_training_export(path: str | Path, *, allow_oracle: bool = False) -> Tra
         raise ValueError("Training requires a scriptWoB seeclick export, not messages JSONL")
     if metadata.get("prompt_version", PROMPT_VERSION) != PROMPT_VERSION:
         raise ValueError("Unsupported SeeClick prompt version")
+    prompt_style = metadata.get("prompt_style", DEFAULT_PROMPT_STYLE)
+    validate_prompt_style(prompt_style)
+    # Original exports predate presentation metadata. Only their original natural
+    # instruction renderer has an implicit version; new styles require an explicit one.
+    default_version = (
+        instruction_version(DEFAULT_PROMPT_STYLE) if prompt_style == DEFAULT_PROMPT_STYLE else None
+    )
+    if metadata.get("instruction_version", default_version) != instruction_version(prompt_style):
+        raise ValueError("Unsupported instruction version for the dataset prompt style")
     supervision = metadata.get("supervision")
     if supervision != "frontier" and not (allow_oracle and supervision == "privileged_oracle"):
         raise ValueError("Training requires frontier supervision; oracle data needs --allow-oracle")
@@ -152,6 +162,8 @@ def load_training_export(path: str | Path, *, allow_oracle: bool = False) -> Tra
         canonical_samples.append(canonical_row)
     if expected_hashes is not None and set(expected_hashes) != set(image_hashes):
         raise ValueError("Dataset image_sha256 contains missing or unreferenced images")
+    if metadata.get("episodes") != len({sample_id.rsplit("/", 1)[0] for sample_id in seen}):
+        raise ValueError("Dataset episode count differs from train.json")
     episode_metadata = None
     if (directory / "episodes.json").is_file():
         episode_metadata = json.loads((directory / "episodes.json").read_text())

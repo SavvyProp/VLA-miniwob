@@ -1,0 +1,196 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scriptWoB example prompts and replays</title>
+<style>body{font:17px/1.55 system-ui,sans-serif;max-width:1040px;margin:40px auto;
+padding:0 24px;color:#172538}h1,h2{line-height:1.2}
+section{margin:44px 0;border-top:1px solid #ccd4df}
+video{width:100%;max-width:1000px;background:#172538}blockquote{margin:20px 0;padding:16px;
+background:#f1f4f8;border-left:4px solid #2868a5}a{color:#205c9a}</style>
+<h1>scriptWoB: prompts and example replays</h1>
+<p>A selected successful SeeClick rollout for each script level, plus an unsuccessful
+rollout wherever one exists. These illustrate tasks and errors; they are not a
+representative sample of model performance. Paired examples are different task instances.</p>
+<p>Videos reconstruct saved screenshots with the recorded click locations marked in red.
+Each click is shown for 1.6 seconds; this is illustrative playback, not original timing.
+Successful tasks end with Done; failed trials can stop earlier. Instructions are copied
+verbatim from saved episodes. Failure notes describe recorded behavior, not model reasoning.</p>
+<p>The model also receives the current screenshot and executed-click history. Prompt files
+reconstruct the first step using the exported image path; later steps include click history.</p>
+<section id="L0"><h2>L0: Atomic action</h2>
+<article>
+<h3>Successful example</h3>
+<p>single_button · dev · 2 clicks</p>
+<p><strong></strong></p>
+<blockquote>Press &quot;Cedar&quot;. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L0/initial.png" src="L0/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L0/replay.gif" style="max-width:100%" alt="L0 Successful replay">
+</details>
+<p><a href="L0/replay.gif">GIF with instruction</a> ·
+<a href="L0/replay.mp4">MP4 replay</a> ·
+<a href="L0/instruction.txt">Exact task instruction</a> ·
+<a href="L0/prompt.txt">First-step model-format prompt</a> ·
+<a href="L0/example.json">Source details</a></p>
+</article>
+<p>No unsuccessful L0 trial is available: all 34 dev/test tasks passed.</p>
+</section>
+<section id="L1"><h2>L1: Sequence</h2>
+<article>
+<h3>Successful example</h3>
+<p>mixed_controls · dev · 4 clicks</p>
+<p><strong></strong></p>
+<blockquote>In order: [Toggle &quot;Indigo&quot; once]; then [Click + on &quot;Coral&quot; once]; then [Toggle &quot;Indigo&quot; once]. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L1/initial.png" src="L1/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L1/replay.gif" style="max-width:100%" alt="L1 Successful replay">
+</details>
+<p><a href="L1/replay.gif">GIF with instruction</a> ·
+<a href="L1/replay.mp4">MP4 replay</a> ·
+<a href="L1/instruction.txt">Exact task instruction</a> ·
+<a href="L1/prompt.txt">First-step model-format prompt</a> ·
+<a href="L1/example.json">Source details</a></p>
+</article>
+<article>
+<h3>Unsuccessful example</h3>
+<p>mixed_controls · test · 5 clicks</p>
+<p><strong>Clicked Done at step 5 after only three of the four required Violet increments.</strong></p>
+<blockquote>In order: [Press &quot;Cedar&quot;]; then [Click + on &quot;Violet&quot; once]; then [Click + on &quot;Violet&quot; once]; then [Click + on &quot;Violet&quot; once]; then [Click + on &quot;Violet&quot; once]. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L1/failure/initial.png" src="L1/failure/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L1/failure/replay.gif" style="max-width:100%" alt="L1 Unsuccessful replay">
+</details>
+<p><a href="L1/failure/replay.gif">GIF with instruction</a> ·
+<a href="L1/failure/replay.mp4">MP4 replay</a> ·
+<a href="L1/failure/instruction.txt">Exact task instruction</a> ·
+<a href="L1/failure/prompt.txt">First-step model-format prompt</a> ·
+<a href="L1/failure/example.json">Source details</a></p>
+</article>
+</section>
+<section id="L2"><h2>L2: Conditional</h2>
+<article>
+<h3>Successful example</h3>
+<p>visible_branch · dev · 2 clicks</p>
+<p><strong></strong></p>
+<blockquote>If the checked state of &quot;Silver&quot; equals checked, execute [Press &quot;Cedar&quot;]; otherwise execute [Press &quot;Indigo&quot;]. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L2/initial.png" src="L2/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L2/replay.gif" style="max-width:100%" alt="L2 Successful replay">
+</details>
+<p><a href="L2/replay.gif">GIF with instruction</a> ·
+<a href="L2/replay.mp4">MP4 replay</a> ·
+<a href="L2/instruction.txt">Exact task instruction</a> ·
+<a href="L2/prompt.txt">First-step model-format prompt</a> ·
+<a href="L2/example.json">Source details</a></p>
+</article>
+<article>
+<h3>Unsuccessful example</h3>
+<p>visible_branch · dev · 1 clicks</p>
+<p><strong>Pressed Violet at step 1 although Maple was 3, so the condition required Coral.</strong></p>
+<blockquote>If the value of &quot;Maple&quot; is at least 2, execute [Press &quot;Coral&quot;]; otherwise execute [Press &quot;Violet&quot;]. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L2/failure/initial.png" src="L2/failure/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L2/failure/replay.gif" style="max-width:100%" alt="L2 Unsuccessful replay">
+</details>
+<p><a href="L2/failure/replay.gif">GIF with instruction</a> ·
+<a href="L2/failure/replay.mp4">MP4 replay</a> ·
+<a href="L2/failure/instruction.txt">Exact task instruction</a> ·
+<a href="L2/failure/prompt.txt">First-step model-format prompt</a> ·
+<a href="L2/failure/example.json">Source details</a></p>
+</article>
+</section>
+<section id="L3"><h2>L3: Repetition and stopping</h2>
+<article>
+<h3>Successful example</h3>
+<p>queue_until · test · 3 clicks</p>
+<p><strong></strong></p>
+<blockquote>Until the category of the current item in &quot;Violet&quot; equals &quot;red&quot;, repeat [Click Next on &quot;Violet&quot; once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L3/initial.png" src="L3/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L3/replay.gif" style="max-width:100%" alt="L3 Successful replay">
+</details>
+<p><a href="L3/replay.gif">GIF with instruction</a> ·
+<a href="L3/replay.mp4">MP4 replay</a> ·
+<a href="L3/instruction.txt">Exact task instruction</a> ·
+<a href="L3/prompt.txt">First-step model-format prompt</a> ·
+<a href="L3/example.json">Source details</a></p>
+</article>
+<article>
+<h3>Unsuccessful example</h3>
+<p>while_counter · dev · 4 clicks</p>
+<p><strong>Clicked Done at step 4 with Maple at 6, before reaching the required value of 8.</strong></p>
+<blockquote>While the value of &quot;Maple&quot; is less than 8, repeat [Click + on &quot;Maple&quot; once]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L3/failure/initial.png" src="L3/failure/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L3/failure/replay.gif" style="max-width:100%" alt="L3 Unsuccessful replay">
+</details>
+<p><a href="L3/failure/replay.gif">GIF with instruction</a> ·
+<a href="L3/failure/replay.mp4">MP4 replay</a> ·
+<a href="L3/failure/instruction.txt">Exact task instruction</a> ·
+<a href="L3/failure/prompt.txt">First-step model-format prompt</a> ·
+<a href="L3/failure/example.json">Source details</a></p>
+</article>
+</section>
+<section id="L4"><h2>L4: Branches with loops</h2>
+<article>
+<h3>Successful example</h3>
+<p>while_if · dev · 4 clicks</p>
+<p><strong></strong></p>
+<blockquote>While the value of &quot;Maple&quot; is less than 1, repeat [In order: [If the checked state of &quot;Indigo&quot; equals checked, execute [Press &quot;Silver&quot;]; otherwise execute [Press &quot;Amber&quot;]]; then [Toggle &quot;Indigo&quot; once]; then [Click + on &quot;Maple&quot; once]]. Check the condition before every iteration. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L4/initial.png" src="L4/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L4/replay.gif" style="max-width:100%" alt="L4 Successful replay">
+</details>
+<p><a href="L4/replay.gif">GIF with instruction</a> ·
+<a href="L4/replay.mp4">MP4 replay</a> ·
+<a href="L4/instruction.txt">Exact task instruction</a> ·
+<a href="L4/prompt.txt">First-step model-format prompt</a> ·
+<a href="L4/example.json">Source details</a></p>
+</article>
+<article>
+<h3>Unsuccessful example</h3>
+<p>foreach_if · dev · 3 clicks</p>
+<p><strong>Approved blue Record 2 at step 3; the script required rejecting blue items.</strong></p>
+<blockquote>For each remaining item in &quot;Coral&quot;, in displayed order, execute [If the category of the current item in &quot;Coral&quot; does not equal &quot;blue&quot;, execute [Click Approve for the current item in &quot;Coral&quot;]; otherwise execute [Click Reject for the current item in &quot;Coral&quot;]], then click Next on &quot;Coral&quot;. Stop when no items remain. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L4/failure/initial.png" src="L4/failure/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L4/failure/replay.gif" style="max-width:100%" alt="L4 Unsuccessful replay">
+</details>
+<p><a href="L4/failure/replay.gif">GIF with instruction</a> ·
+<a href="L4/failure/replay.mp4">MP4 replay</a> ·
+<a href="L4/failure/instruction.txt">Exact task instruction</a> ·
+<a href="L4/failure/prompt.txt">First-step model-format prompt</a> ·
+<a href="L4/failure/example.json">Source details</a></p>
+</article>
+</section>
+<section id="L5"><h2>L5: Nested control flow</h2>
+<article>
+<h3>Successful example</h3>
+<p>nested_repeat · dev · 13 clicks</p>
+<p><strong>This example uses nested counts on the same button: twelve Coral presses, then Done.</strong></p>
+<blockquote>Repeat exactly 3 times: [In order: [Repeat exactly 3 times: [Press &quot;Coral&quot;]]; then [Press &quot;Coral&quot;]]. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L5/initial.png" src="L5/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L5/replay.gif" style="max-width:100%" alt="L5 Successful replay">
+</details>
+<p><a href="L5/replay.gif">GIF with instruction</a> ·
+<a href="L5/replay.mp4">MP4 replay</a> ·
+<a href="L5/instruction.txt">Exact task instruction</a> ·
+<a href="L5/prompt.txt">First-step model-format prompt</a> ·
+<a href="L5/example.json">Source details</a></p>
+</article>
+<article>
+<h3>Unsuccessful example</h3>
+<p>nested_repeat · dev · 2 clicks</p>
+<p><strong>Pressed Amber at step 2 after one Coral toggle, before completing three inner-loop toggles.</strong></p>
+<blockquote>Repeat exactly 3 times: [In order: [Repeat exactly 3 times: [Toggle &quot;Coral&quot; once]]; then [Press &quot;Amber&quot;]]. When the whole script is complete, click Done. Do not perform any extra actions.</blockquote>
+<video controls preload="metadata" poster="L5/failure/initial.png" src="L5/failure/replay.mp4"></video>
+<details><summary>GIF with task instruction</summary>
+<img loading="lazy" src="L5/failure/replay.gif" style="max-width:100%" alt="L5 Unsuccessful replay">
+</details>
+<p><a href="L5/failure/replay.gif">GIF with instruction</a> ·
+<a href="L5/failure/replay.mp4">MP4 replay</a> ·
+<a href="L5/failure/instruction.txt">Exact task instruction</a> ·
+<a href="L5/failure/prompt.txt">First-step model-format prompt</a> ·
+<a href="L5/failure/example.json">Source details</a></p>
+</article>
+</section></html>

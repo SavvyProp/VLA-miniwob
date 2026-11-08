@@ -17,6 +17,12 @@ from .collection import ResumeConfigurationError, _failure_details, run, write_j
 from .export import export_dataset
 from .generation import FAMILIES, generate_manifest, read_manifest, task_fingerprint
 from .policies import OpenAITeacher, OraclePolicy, TeacherConfig, load_policy
+from .prompt_styles import (
+    build_instruction_map,
+    instruction_version,
+    render_episode_instruction,
+    validate_prompt_style,
+)
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 LEVELS = {
@@ -368,10 +374,67 @@ def evaluate(
 
 @app.command("export")
 def export_command(
-    run_dir: Path, output: Path, format: str = "messages", allow_oracle: bool = False
+    run_dir: Path, output: Path, format: str = "messages", allow_oracle: bool = False,
+    prompt_style: Annotated[str, typer.Option(help="Instruction presentation: natural or code.")]
+    = "natural",
 ):
     """Export accepted train examples; formats: messages JSONL or upstream seeclick JSON."""
-    _print(export_dataset(run_dir, output, format=format, allow_oracle=allow_oracle))
+    _print(export_dataset(
+        run_dir, output, format=format, allow_oracle=allow_oracle, prompt_style=prompt_style,
+    ))
+
+
+@app.command("reformat-seeclick")
+def reformat_seeclick_command(
+    source: Path,
+    manifest_path: Path,
+    output: Path,
+    prompt_style: str = "code",
+    allow_oracle: bool = False,
+):
+    """Rewrite an existing SeeClick export using its original task manifest; no recollection."""
+    from .export import reformat_seeclick_export
+
+    _print(reformat_seeclick_export(
+        source, manifest_path, output, prompt_style=prompt_style, allow_oracle=allow_oracle,
+    ))
+
+
+@app.command("render-prompts")
+def render_prompts_command(
+    manifest_path: Path, output: Path, prompt_style: str = "code", split: str = "all",
+):
+    """Write every selected task's original and reformatted instruction to reviewable JSONL."""
+    try:
+        validate_prompt_style(prompt_style)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if split not in {"all", "train", "dev", "test"}:
+        raise typer.BadParameter("split must be all, train, dev or test")
+    if output.exists():
+        raise typer.BadParameter("Output already exists; choose a new prompt preview path")
+    manifest = read_manifest(manifest_path)
+    version = instruction_version(prompt_style)
+    rows = [
+        {
+            "episode_id": episode.id, "split": episode.split,
+            "level": episode.level, "family": episode.family,
+            "original_instruction": episode.instruction,
+            "instruction": render_episode_instruction(episode, prompt_style),
+            "prompt_style": prompt_style, "instruction_version": version,
+        }
+        for episode in manifest.episodes if split == "all" or episode.split == split
+    ]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("x", encoding="utf-8") as stream:
+        for row in rows:
+            stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+    _print({
+        "output": str(output), "episodes": len(rows),
+        "splits": dict(Counter(row["split"] for row in rows)),
+        "manifest_digest": manifest.digest, "prompt_style": prompt_style,
+        "instruction_version": version,
+    })
 
 
 @app.command("train-seeclick")
@@ -383,6 +446,9 @@ def train_seeclick_command(
     resume: bool = False,
     prepare_only: bool = False,
     allow_oracle: bool = False,
+    prompt_style: Annotated[str | None, typer.Option(
+        help="natural or code; inherits the export's style, or natural for a new collection export."
+    )] = None,
 ):
     """Fine-tune pretrained SeeClick from a collection run or SeeClick export.
 
@@ -403,6 +469,7 @@ def train_seeclick_command(
             resume=resume,
             prepare_only=prepare_only,
             allow_oracle=allow_oracle,
+            prompt_style=prompt_style,
         )
     )
 
@@ -420,6 +487,9 @@ def evaluate_seeclick_command(
     precision: str | None = None,
     max_context_tokens: Annotated[int | None, typer.Option(min=1)] = None,
     max_new_tokens: Annotated[int, typer.Option(min=1)] = 64,
+    prompt_style: Annotated[str | None, typer.Option(
+        help="Inherits the training format; set natural or code for a deliberate prompt ablation."
+    )] = None,
     allow_different_manifest: bool = False,
     headed: bool = False,
     fresh: Annotated[bool, typer.Option(
@@ -434,6 +504,13 @@ def evaluate_seeclick_command(
         raise typer.BadParameter("Evaluation split must be dev or test")
     manifest = read_manifest(manifest_path)
     _, _, metadata = resolve_checkpoint(checkpoint)
+    selected_style = prompt_style or metadata.get("dataset", {}).get("metadata", {}).get(
+        "prompt_style", "natural"
+    )
+    try:
+        validate_prompt_style(selected_style)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
     training_manifest = metadata.get("dataset", {}).get("metadata", {}).get("manifest_digest")
     if training_manifest and training_manifest != manifest.digest and not allow_different_manifest:
         raise typer.BadParameter(
@@ -448,6 +525,10 @@ def evaluate_seeclick_command(
         precision=precision,
         max_context_tokens=max_context_tokens,
         max_new_tokens=max_new_tokens,
+        prompt_style=selected_style,
+        instruction_map=(
+            build_instruction_map(manifest, selected_style) if selected_style != "natural" else None
+        ),
     )
     try:
         result = _run_rollouts(

@@ -90,13 +90,54 @@ class SeeClickPolicy:
         precision: str | None = None,
         max_context_tokens: int | None = None,
         max_new_tokens: int = 64,
+        prompt_style: str | None = None,
+        instruction_map: dict[str, str] | None = None,
     ) -> None:
         from . import seeclick_runtime as runtime
+        from .prompt_styles import (
+            DEFAULT_PROMPT_STYLE,
+            instruction_version,
+            validate_prompt_style,
+        )
         from .seeclick_prompt import PROMPT_VERSION
 
         config, adapter_path, metadata = runtime.resolve_checkpoint(
             checkpoint, device=device, quantization=quantization, precision=precision,
         )
+        dataset_metadata = metadata.get("dataset", {}).get("metadata", {})
+        trained_style = dataset_metadata.get("prompt_style", DEFAULT_PROMPT_STYLE)
+        validate_prompt_style(trained_style)
+        selected_style = trained_style if prompt_style is None else prompt_style
+        validate_prompt_style(selected_style)
+        version = instruction_version(selected_style)
+        trained_version = dataset_metadata.get("instruction_version")
+        if trained_style != DEFAULT_PROMPT_STYLE and trained_version is None:
+            raise ValueError("Code checkpoint metadata is missing instruction_version")
+        if selected_style == trained_style and trained_version not in (None, version):
+            raise ValueError(
+                "Checkpoint instruction version differs from the current renderer: "
+                f"{trained_version!r} != {version!r}"
+            )
+        # This is a static map of public instruction strings, supplied by the CLI.
+        # No program, world state, branch decisions, or evaluator is available here.
+        if selected_style != DEFAULT_PROMPT_STYLE:
+            if not isinstance(instruction_map, dict) or not instruction_map:
+                raise ValueError("Code prompt style requires a nonempty instruction_map")
+            if any(
+                not isinstance(source, str) or not source.strip()
+                or not isinstance(presented, str) or not presented.strip()
+                for source, presented in instruction_map.items()
+            ):
+                raise ValueError("instruction_map must contain only nonempty instruction strings")
+            self._instruction_map = dict(instruction_map)
+            map_digest = hashlib.sha256(json.dumps(
+                self._instruction_map, sort_keys=True, ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")).hexdigest()
+        else:
+            self._instruction_map = None
+            map_digest = None
+        self.prompt_style = selected_style
         if max_context_tokens is None:
             max_context_tokens = metadata.get("max_length", 2048)
         if max_context_tokens < 1 or max_new_tokens < 1 or max_new_tokens >= max_context_tokens:
@@ -123,6 +164,12 @@ class SeeClickPolicy:
             "checkpoint_metadata": deepcopy(metadata),
             "checkpoint_files_sha256": hashes,
             "prompt_version": PROMPT_VERSION,
+            "prompt_style": selected_style,
+            "instruction_version": version,
+            "instruction_map_sha256": map_digest,
+            "trained_prompt_style": trained_style,
+            "trained_instruction_version": trained_version,
+            "prompt_style_overridden": selected_style != trained_style,
             "generation": {
                 "do_sample": False, "num_beams": 1,
                 "max_context_tokens": max_context_tokens,
@@ -138,18 +185,31 @@ class SeeClickPolicy:
     def predict(self, observation: Observation) -> ClickAction:
         if self.model is None:
             raise RuntimeError("SeeClick policy has been closed")
-        import torch
-
         from .seeclick_prompt import build_inference_inputs, build_user_prompt
 
         call: dict[str, Any] = {"call": len(self.calls) + 1, "status": "requested"}
         self.calls.append(call)
+        instruction = observation.instruction
+        if self._instruction_map is not None:
+            try:
+                instruction = self._instruction_map[instruction]
+            except KeyError as exc:
+                call.update(status="invalid_output", error_type="UnknownInstruction")
+                raise PolicyOutputError(
+                    "Instruction is missing from the static code prompt map; "
+                    "the original prompt was not substituted"
+                ) from exc
+        # episode.json keeps the canonical task instruction. Record what the
+        # model actually receives so prompt-style comparisons remain auditable.
+        call["presented_instruction"] = instruction
+        import torch
+
         # Qwen-VL reads image paths during model.forward; keep the file alive for
         # the whole generation, then remove it on success and every error path.
         with tempfile.TemporaryDirectory(prefix="scriptwob-seeclick-") as temporary:
             image_path = Path(temporary) / "observation.png"
             observation.image.convert("RGB").save(image_path, format="PNG")
-            prompt = build_user_prompt(observation.instruction, observation.history, image_path)
+            prompt = build_user_prompt(instruction, observation.history, image_path)
             try:
                 encoded = build_inference_inputs(
                     self.tokenizer, prompt, max_length=self.max_context_tokens,
