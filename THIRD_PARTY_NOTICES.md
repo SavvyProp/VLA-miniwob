@@ -13,6 +13,17 @@
 - **Qwen-VL**, Alibaba Cloud and contributors. Pinned tokenizer/model custom code
   and font are loaded as runtime dependencies. Consult the model repository's terms:
   https://huggingface.co/Qwen/Qwen-VL-Chat
+- **GUI-Owl 1.5**, mPLUG / MobileAgent authors, MIT license as declared by the
+  released 2B, 4B, and 8B Instruct model cards. Pretrained weights and processor
+  assets are loaded from immutable Hugging Face revisions, not redistributed.
+  The scriptWoB adapter uses one normalized click per step and its own training
+  prompt; it does not reproduce the upstream agent orchestration system.
+  Models: https://huggingface.co/mPLUG/GUI-Owl-1.5-2B-Instruct
+  Official code: https://github.com/X-PLUG/MobileAgent
+- **Qwen3-VL**, Qwen team / Alibaba Cloud and contributors, Apache License 2.0
+  for the official repository. GUI-Owl uses its architecture, loaded through
+  the native Transformers implementation and pinned processor assets:
+  https://github.com/QwenLM/Qwen3-VL
 - **Transformers, PEFT, Accelerate**, Hugging Face and contributors, Apache License
   2.0. Used for model loading, LoRA, training, and checkpoints. **PyTorch/torchvision**
   and **bitsandbytes** are optional training-runtime dependencies with their upstream

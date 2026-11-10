@@ -1,0 +1,15 @@
+Follow the script in order. Perform only the listed clicks.
+Read each IF condition when entering that IF; finish only the selected branch.
+Testing a condition does not click or change any control.
+WHILE: check before the first and every later iteration; stop when false.
+
+WHILE counter "Amber" < 3:
+    IF checkbox "Cedar" is checked:
+        Click button "Olive" once.
+    ELSE:
+        Click button "Silver" once.
+    END IF
+    Toggle checkbox "Cedar" once.
+    Click + Increase on counter "Amber" once.
+END WHILE
+Click Done.

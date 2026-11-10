@@ -1,0 +1,13 @@
+{
+  "episode_id": "L4-44ebdcbb2767d24a",
+  "family": "while_if",
+  "success": true,
+  "source_attempt": "runs/seeclick-800-code-6epochs-dev/attempts/3b6d78893c928a49031a7ec8-001",
+  "clicks": 7,
+  "loop_iterations": 2,
+  "instruction_source": "provider_calls.json:presented_instruction",
+  "checkpoint_global_step": 1899,
+  "checkpoint_reported_epoch": 8.98,
+  "replay_seconds": 17.0,
+  "note": "Reconstructed from saved screenshots; red box marks recorded clicks; fixed playback timing."
+}

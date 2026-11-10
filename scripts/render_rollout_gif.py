@@ -4,6 +4,7 @@
 Requires Python 3.11+ and ffmpeg. No model, browser, GPU, or API calls are needed.
 Input: an attempt directory containing episode.json, transitions.jsonl and PNGs.
 Playback uses fixed timing; it is a reconstruction, not an original recording.
+Uses the logged presented instruction when available, including code-style prompts.
 """
 
 from __future__ import annotations
@@ -79,14 +80,35 @@ def render(args: argparse.Namespace) -> None:
         raise ValueError("Durations must be positive, width >= 320, and fps between 1 and 30")
 
     episode, rows, (width, height) = read_rollout(source)
+    instruction = episode["instruction"]
+    instruction_source = "episode.json"
+    calls_path = source / "provider_calls.json"
+    if calls_path.is_file():
+        calls = json.loads(calls_path.read_text())
+        if not isinstance(calls, list):
+            raise ValueError("Provider calls must be a list")
+        presented = [call["presented_instruction"] for call in calls
+                     if "presented_instruction" in call]
+        if presented:
+            if any(not isinstance(text, str) or not text.strip() for text in presented):
+                raise ValueError("Invalid logged instruction")
+            if len(set(presented)) != 1:
+                raise ValueError("Presented instruction changed during the rollout")
+            instruction = presented[0]
+            instruction_source = "provider_calls.json:presented_instruction"
     level = episode["level"]
     title = f"scriptWoB L{level} - {LEVEL_NAMES[level]}"
     # Monospace glyph width is approximately 0.60 * font size. Leave extra room
     # so the longest instructions remain inside the screenshot width.
-    font_size, line_height = 20, 26
+    # drawtext's glyph metrics plus line_spacing can exceed font size + spacing,
+    # especially with mixed ASCII and Unicode. Reserve enough for multiline code.
+    font_size, line_height = 20, 34
     wrap_width = max(20, int((width - 40) / (font_size * 0.62)))
-    prompt_lines = ["Task instruction:"]
-    for paragraph in episode["instruction"].splitlines():
+    prompt_lines = [
+        "Task instruction (as presented):"
+        if instruction_source != "episode.json" else "Task instruction:"
+    ]
+    for paragraph in instruction.splitlines():
         prompt_lines.extend(textwrap.wrap(paragraph, width=wrap_width) or [""])
     header_height = 64 + len(prompt_lines) * line_height + 16
     footer_height = 64
@@ -174,7 +196,8 @@ def render(args: argparse.Namespace) -> None:
         output.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(temporary_gif, output)
     print(json.dumps({"output": str(output), "level": level, "clicks": len(rows),
-                      "seconds": duration, "source": str(source)}))
+                      "seconds": duration, "source": str(source),
+                      "instruction_source": instruction_source}))
 
 
 def main() -> None:

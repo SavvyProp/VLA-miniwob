@@ -1,0 +1,7 @@
+level,description,successes,tasks,success_rate_percent,dev_tasks,dev_successes,test_tasks,test_successes
+0,Atomic action,34,34,100.0,17,17,17,17
+1,Sequence,32,34,94.11764705882354,17,17,17,15
+2,Conditional,8,34,23.529411764705884,17,2,17,6
+3,Repetition and stopping,22,34,64.70588235294117,17,13,17,9
+4,Branches with loops,4,32,12.5,16,2,16,2
+5,Nested control flow,1,32,3.125,16,1,16,0

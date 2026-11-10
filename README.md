@@ -7,7 +7,7 @@ nested control flow. A policy reads the procedure and screenshot, then predicts
 iteration counts, and stopping.
 
 This repository provides task generation, a Chrome environment, frontier-expert
-collection, SeeClick fine-tuning, checkpoint evaluation, and portable exports. It replaces the earlier
+collection, SeeClick and GUI-Owl fine-tuning, checkpoint evaluation, and portable exports. It replaces the earlier
 TinyVLA benchmark; existing run directories are not migrated.
 
 The implementation reuses pinned [MiniWoB++](https://github.com/Farama-Foundation/miniwob-plusplus)
@@ -274,6 +274,47 @@ Final adapters are in `runs/seeclick/adapter/`; resumable checkpoints are under
 `runs/seeclick/checkpoints/`. Evaluation results are in the selected output's
 `report.json`, with screenshots and action traces under `attempts/`.
 See [SeeClick setup, preflight, resume, and limitations](docs/seeclick.md).
+
+## Fine-tune and evaluate GUI-Owl 2B, 4B, and 8B
+
+Separate launchers are available for every size:
+
+```bash
+./scripts/gui_owl/fetch_2b.sh
+./scripts/gui_owl/train_2b.sh
+./scripts/gui_owl/eval_2b.sh
+```
+
+Replace `2b` with `4b` or `8b` for the other models. Training reuses
+`datasets/seeclick-800-code`; evaluation runs both dev and test. The scripts
+support `--help`, custom input/output paths, and training options such as
+`--resume`. See [script usage](docs/gui_owl.md#separate-scripts-for-each-model).
+
+The GUI-Owl integration starts from the released Qwen3-VL-based
+`mPLUG/GUI-Owl-1.5-{2,4,8}B-Instruct` checkpoints. It reuses your existing
+SeeClick-format training export, including the 800 code-prompt demonstrations.
+Each input contains the current screenshot, up to three previous screenshots,
+the script, and the complete click history. Only the next-click JSON is a
+training target. All three configurations share the same history, image limits,
+context length, and language-only LoRA recipe.
+
+```bash
+uv sync --project integrations/gui_owl --extra cuda --frozen
+
+uv run --project integrations/gui_owl --extra cuda --frozen \
+  scriptwob train-gui-owl datasets/seeclick-800-code runs/gui-owl-2b-code \
+  --config configs/gui_owl_2b_3090.json
+
+uv run --project integrations/gui_owl --extra cuda --frozen \
+  scriptwob evaluate-gui-owl runs/gui-owl-2b-code configs/suite_800.json \
+  runs/gui-owl-2b-code-dev --split dev --max-total-steps 10000
+```
+
+Use the corresponding `4b` or `8b` config and separate output directories for
+the other sizes. Full pretrained GPU training and peak memory need verification
+on the target machine; `--prepare-only` checks the dataset and processor without
+loading model weights. See [GUI-Owl setup, all-size commands, screenshot memory,
+resume, and evaluation](docs/gui_owl.md).
 
 ## Evaluate a reference or student
 

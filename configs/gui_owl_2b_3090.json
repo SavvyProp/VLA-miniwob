@@ -1,0 +1,29 @@
+{
+  "model": {
+    "model_id": "mPLUG/GUI-Owl-1.5-2B-Instruct",
+    "model_revision": "528ceaec795bbfbe6103bd79e03db849feadfb24",
+    "quantization": "4bit",
+    "precision": "bf16",
+    "device": "cuda:0",
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "gradient_checkpointing": true,
+    "min_pixels": 65536,
+    "max_pixels": 262144
+  },
+  "max_length": 8192,
+  "epochs": 3.0,
+  "max_steps": -1,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 16,
+  "learning_rate": 0.0001,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.03,
+  "max_grad_norm": 1.0,
+  "save_steps": 100,
+  "save_total_limit": 2,
+  "logging_steps": 10,
+  "seed": 2026,
+  "history_images": 3
+}

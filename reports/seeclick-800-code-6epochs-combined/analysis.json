@@ -1,0 +1,375 @@
+{
+  "tasks": 200,
+  "successes": 142,
+  "success_rate_percent": 71.0,
+  "splits": [
+    "dev",
+    "test"
+  ],
+  "protocol": "First-attempt successes divided by evaluated tasks, pooling input splits. Success requires completing the entire script and clicking Done. Input runs must be complete with matching checkpoint/task/prompt settings.",
+  "sources": [
+    {
+      "run": "runs/seeclick-800-code-6epochs-dev",
+      "split": "dev",
+      "tasks": 100,
+      "successes": 71,
+      "manifest_digest": "ab9e49135f5628c3418a601c161537a77500293b4fc6d09516a7772a4bee7c8b",
+      "run_json_sha256": "c6805f312325c0e7f998f4f3bf3066ee6d68ac1f6726c39be40d78cf221d8710"
+    },
+    {
+      "run": "runs/seeclick-800-code-6epochs-test",
+      "split": "test",
+      "tasks": 100,
+      "successes": 71,
+      "manifest_digest": "ab9e49135f5628c3418a601c161537a77500293b4fc6d09516a7772a4bee7c8b",
+      "run_json_sha256": "f194620612548ec66d177ce73789ebac0c5ad6645b9278e2ba651d7f73f5347b"
+    }
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "description": "Atomic action",
+      "successes": 34,
+      "tasks": 34,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 17,
+      "dev_successes": 17,
+      "test_tasks": 17,
+      "test_successes": 17
+    },
+    {
+      "level": 1,
+      "description": "Sequence",
+      "successes": 34,
+      "tasks": 34,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 17,
+      "dev_successes": 17,
+      "test_tasks": 17,
+      "test_successes": 17
+    },
+    {
+      "level": 2,
+      "description": "Conditional",
+      "successes": 17,
+      "tasks": 34,
+      "success_rate_percent": 50.0,
+      "dev_tasks": 17,
+      "dev_successes": 8,
+      "test_tasks": 17,
+      "test_successes": 9
+    },
+    {
+      "level": 3,
+      "description": "Repetition and stopping",
+      "successes": 32,
+      "tasks": 34,
+      "success_rate_percent": 94.11764705882354,
+      "dev_tasks": 17,
+      "dev_successes": 16,
+      "test_tasks": 17,
+      "test_successes": 16
+    },
+    {
+      "level": 4,
+      "description": "Branches with loops",
+      "successes": 12,
+      "tasks": 32,
+      "success_rate_percent": 37.5,
+      "dev_tasks": 16,
+      "dev_successes": 5,
+      "test_tasks": 16,
+      "test_successes": 7
+    },
+    {
+      "level": 5,
+      "description": "Nested control flow",
+      "successes": 13,
+      "tasks": 32,
+      "success_rate_percent": 40.625,
+      "dev_tasks": 16,
+      "dev_successes": 8,
+      "test_tasks": 16,
+      "test_successes": 5
+    }
+  ],
+  "families": [
+    {
+      "level": 0,
+      "family": "single_button",
+      "description": "Press one named button",
+      "successes": 11,
+      "tasks": 11,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 7,
+      "dev_successes": 7,
+      "test_tasks": 4,
+      "test_successes": 4
+    },
+    {
+      "level": 0,
+      "family": "single_toggle",
+      "description": "Toggle one checkbox",
+      "successes": 13,
+      "tasks": 13,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 6,
+      "dev_successes": 6,
+      "test_tasks": 7,
+      "test_successes": 7
+    },
+    {
+      "level": 0,
+      "family": "single_counter",
+      "description": "Change a counter once",
+      "successes": 10,
+      "tasks": 10,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 4,
+      "dev_successes": 4,
+      "test_tasks": 6,
+      "test_successes": 6
+    },
+    {
+      "level": 1,
+      "family": "ordered_buttons",
+      "description": "An ordered sequence of button presses",
+      "successes": 21,
+      "tasks": 21,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 11,
+      "dev_successes": 11,
+      "test_tasks": 10,
+      "test_successes": 10
+    },
+    {
+      "level": 1,
+      "family": "mixed_controls",
+      "description": "An ordered sequence across widget types",
+      "successes": 13,
+      "tasks": 13,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 6,
+      "dev_successes": 6,
+      "test_tasks": 7,
+      "test_successes": 7
+    },
+    {
+      "level": 2,
+      "family": "visible_branch",
+      "description": "Choose a branch from visible state",
+      "successes": 10,
+      "tasks": 14,
+      "success_rate_percent": 71.42857142857143,
+      "dev_tasks": 6,
+      "dev_successes": 3,
+      "test_tasks": 8,
+      "test_successes": 7
+    },
+    {
+      "level": 2,
+      "family": "branch_sequence",
+      "description": "Choose between short sequences",
+      "successes": 4,
+      "tasks": 12,
+      "success_rate_percent": 33.333333333333336,
+      "dev_tasks": 7,
+      "dev_successes": 2,
+      "test_tasks": 5,
+      "test_successes": 2
+    },
+    {
+      "level": 2,
+      "family": "compound_branch",
+      "description": "Branch on a Boolean combination",
+      "successes": 3,
+      "tasks": 8,
+      "success_rate_percent": 37.5,
+      "dev_tasks": 4,
+      "dev_successes": 3,
+      "test_tasks": 4,
+      "test_successes": 0
+    },
+    {
+      "level": 3,
+      "family": "counted_repeat",
+      "description": "Repeat a block a fixed number of times",
+      "successes": 3,
+      "tasks": 5,
+      "success_rate_percent": 60.0,
+      "dev_tasks": 4,
+      "dev_successes": 3,
+      "test_tasks": 1,
+      "test_successes": 0
+    },
+    {
+      "level": 3,
+      "family": "while_counter",
+      "description": "Increase a counter while a numeric condition holds",
+      "successes": 6,
+      "tasks": 6,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 1,
+      "dev_successes": 1,
+      "test_tasks": 5,
+      "test_successes": 5
+    },
+    {
+      "level": 3,
+      "family": "until_counter",
+      "description": "Decrease a counter until a numeric condition holds",
+      "successes": 9,
+      "tasks": 9,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 6,
+      "dev_successes": 6,
+      "test_tasks": 3,
+      "test_successes": 3
+    },
+    {
+      "level": 3,
+      "family": "queue_until",
+      "description": "Advance until a matching record",
+      "successes": 5,
+      "tasks": 5,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 2,
+      "dev_successes": 2,
+      "test_tasks": 3,
+      "test_successes": 3
+    },
+    {
+      "level": 3,
+      "family": "foreach",
+      "description": "Process every record in displayed order",
+      "successes": 9,
+      "tasks": 9,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 4,
+      "dev_successes": 4,
+      "test_tasks": 5,
+      "test_successes": 5
+    },
+    {
+      "level": 4,
+      "family": "foreach_if",
+      "description": "Classify each record using a conditional",
+      "successes": 1,
+      "tasks": 7,
+      "success_rate_percent": 14.285714285714286,
+      "dev_tasks": 5,
+      "dev_successes": 1,
+      "test_tasks": 2,
+      "test_successes": 0
+    },
+    {
+      "level": 4,
+      "family": "while_if",
+      "description": "Branch inside a state-dependent loop",
+      "successes": 4,
+      "tasks": 7,
+      "success_rate_percent": 57.142857142857146,
+      "dev_tasks": 3,
+      "dev_successes": 1,
+      "test_tasks": 4,
+      "test_successes": 3
+    },
+    {
+      "level": 4,
+      "family": "if_loop",
+      "description": "Choose between two loops",
+      "successes": 5,
+      "tasks": 9,
+      "success_rate_percent": 55.55555555555556,
+      "dev_tasks": 4,
+      "dev_successes": 3,
+      "test_tasks": 5,
+      "test_successes": 2
+    },
+    {
+      "level": 4,
+      "family": "repeat_if",
+      "description": "Repeated conditional execution",
+      "successes": 2,
+      "tasks": 9,
+      "success_rate_percent": 22.22222222222222,
+      "dev_tasks": 4,
+      "dev_successes": 0,
+      "test_tasks": 5,
+      "test_successes": 2
+    },
+    {
+      "level": 5,
+      "family": "nested_repeat",
+      "description": "Repeat a block containing repetition",
+      "successes": 4,
+      "tasks": 11,
+      "success_rate_percent": 36.36363636363637,
+      "dev_tasks": 5,
+      "dev_successes": 2,
+      "test_tasks": 6,
+      "test_successes": 2
+    },
+    {
+      "level": 5,
+      "family": "foreach_repeat_if",
+      "description": "Repeat a conditional for each record",
+      "successes": 0,
+      "tasks": 3,
+      "success_rate_percent": 0.0,
+      "dev_tasks": 1,
+      "dev_successes": 0,
+      "test_tasks": 2,
+      "test_successes": 0
+    },
+    {
+      "level": 5,
+      "family": "while_repeat",
+      "description": "Counted loop inside a while loop",
+      "successes": 6,
+      "tasks": 6,
+      "success_rate_percent": 100.0,
+      "dev_tasks": 4,
+      "dev_successes": 4,
+      "test_tasks": 2,
+      "test_successes": 2
+    },
+    {
+      "level": 5,
+      "family": "branch_nested_loop",
+      "description": "Branch into nested repetitions",
+      "successes": 0,
+      "tasks": 6,
+      "success_rate_percent": 0.0,
+      "dev_tasks": 4,
+      "dev_successes": 0,
+      "test_tasks": 2,
+      "test_successes": 0
+    },
+    {
+      "level": 5,
+      "family": "until_repeat_if",
+      "description": "Until loop containing repetition and branching",
+      "successes": 3,
+      "tasks": 6,
+      "success_rate_percent": 50.0,
+      "dev_tasks": 2,
+      "dev_successes": 2,
+      "test_tasks": 4,
+      "test_successes": 1
+    }
+  ],
+  "checkpoint_training": {
+    "dev": {
+      "global_step": 1899,
+      "reported_epoch": 8.98,
+      "prompt_style": "code"
+    },
+    "test": {
+      "global_step": 1899,
+      "reported_epoch": 8.98,
+      "prompt_style": "code"
+    }
+  },
+  "label_note": "Source folders are named 6epochs, but both saved checkpoints record global_step=1899 and epoch=8.98. Plots are labeled approximately 9 total epochs."
+}

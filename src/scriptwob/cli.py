@@ -555,6 +555,107 @@ def report(run_dir: Path):
     _print(json.loads((run_dir / "report.json").read_text()))
 
 
+@app.command("train-gui-owl")
+def train_gui_owl_command(
+    source: Path,
+    output: Path,
+    config: Path | None = None,
+    max_steps: Annotated[int | None, typer.Option(min=1)] = None,
+    history_images: Annotated[int | None, typer.Option(
+        min=0, max=32, help="Number of prior screenshots; current screenshot is always included."
+    )] = None,
+    resume: bool = False,
+    prepare_only: bool = False,
+    allow_oracle: bool = False,
+    prompt_style: Annotated[str | None, typer.Option(
+        help="Inherit export style; natural or code when exporting a collection."
+    )] = None,
+):
+    """Fine-tune GUI-Owl 2B/4B/8B using existing expert demonstrations.
+
+    Use integrations/gui_owl's uv runtime. prepare-only validates chronology,
+    images and token lengths without loading model weights.
+    """
+    from .gui_owl_training import GUIOwlTrainingConfig, train_gui_owl
+
+    values = json.loads(config.read_text()) if config else {}
+    if max_steps is not None:
+        values["max_steps"] = max_steps
+    if history_images is not None:
+        values["history_images"] = history_images
+    settings = GUIOwlTrainingConfig.model_validate(values)
+    _print(train_gui_owl(
+        source, output, settings, resume=resume, prepare_only=prepare_only,
+        allow_oracle=allow_oracle, prompt_style=prompt_style,
+    ))
+
+
+@app.command("evaluate-gui-owl")
+def evaluate_gui_owl_command(
+    checkpoint: str,
+    manifest_path: Path,
+    output: Path,
+    split: str = "test",
+    max_episodes: Annotated[int | None, typer.Option(min=1)] = None,
+    max_total_steps: Annotated[int, typer.Option(min=1)] = 10000,
+    device: str | None = None,
+    quantization: str | None = None,
+    precision: str | None = None,
+    max_context_tokens: Annotated[int | None, typer.Option(min=1)] = None,
+    max_new_tokens: Annotated[int, typer.Option(min=1)] = 64,
+    history_images: Annotated[int | None, typer.Option(
+        min=0, max=32, help="Override trained screenshot history for a deliberate ablation."
+    )] = None,
+    prompt_style: Annotated[str | None, typer.Option(
+        help="Inherit checkpoint style; natural or code for a deliberate prompt ablation."
+    )] = None,
+    allow_different_manifest: bool = False,
+    headed: bool = False,
+    fresh: Annotated[bool, typer.Option(
+        help="Start a separate run in a uniquely named sibling output directory."
+    )] = False,
+):
+    """Evaluate an adapter or pretrained base-2b/base-4b/base-8b on dev/test."""
+    from .gui_owl_policy import GUIOwlPolicy
+    from .gui_owl_runtime import resolve_checkpoint
+
+    if split not in {"dev", "test"}:
+        raise typer.BadParameter("Evaluation split must be dev or test")
+    manifest = read_manifest(manifest_path)
+    _, _, metadata = resolve_checkpoint(checkpoint)
+    selected_style = prompt_style or metadata.get("dataset", {}).get("metadata", {}).get(
+        "prompt_style", "natural"
+    )
+    try:
+        validate_prompt_style(selected_style)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    training_manifest = metadata.get("dataset", {}).get("metadata", {}).get("manifest_digest")
+    if training_manifest and training_manifest != manifest.digest and not allow_different_manifest:
+        raise typer.BadParameter(
+            "Evaluation manifest differs from the training manifest. Use the original manifest, "
+            "or --allow-different-manifest for a deliberate transfer evaluation after checking "
+            "that its dev/test tasks were not used for training."
+        )
+    policy = GUIOwlPolicy(
+        checkpoint, device=device, quantization=quantization, precision=precision,
+        max_context_tokens=max_context_tokens, max_new_tokens=max_new_tokens,
+        history_images=history_images, prompt_style=selected_style,
+        instruction_map=(
+            build_instruction_map(manifest, selected_style) if selected_style != "natural" else None
+        ),
+    )
+    try:
+        result = _run_rollouts(
+            manifest, output, policy, fresh=fresh, mode="evaluate", split=split, attempts=1,
+            max_episodes=max_episodes, max_total_steps=max_total_steps, headless=not headed,
+        )
+    finally:
+        policy.close()
+    if result["stop_reason"] in {"provider_error", "infrastructure_error", "runner_error"}:
+        raise typer.Exit(1)
+
+
 @app.command()
 def doctor():
     """Check local prerequisites without making an API request or starting Chrome."""

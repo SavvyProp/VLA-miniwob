@@ -1,0 +1,23 @@
+level,family,description,successes,tasks,success_rate_percent,dev_tasks,dev_successes,test_tasks,test_successes
+0,single_button,Press one named button,11,11,100.0,7,7,4,4
+0,single_toggle,Toggle one checkbox,13,13,100.0,6,6,7,7
+0,single_counter,Change a counter once,10,10,100.0,4,4,6,6
+1,ordered_buttons,An ordered sequence of button presses,21,21,100.0,11,11,10,10
+1,mixed_controls,An ordered sequence across widget types,11,13,84.61538461538461,6,6,7,5
+2,visible_branch,Choose a branch from visible state,6,14,42.857142857142854,6,2,8,4
+2,branch_sequence,Choose between short sequences,1,12,8.333333333333334,7,0,5,1
+2,compound_branch,Branch on a Boolean combination,1,8,12.5,4,0,4,1
+3,counted_repeat,Repeat a block a fixed number of times,2,5,40.0,4,2,1,0
+3,while_counter,Increase a counter while a numeric condition holds,0,6,0.0,1,0,5,0
+3,until_counter,Decrease a counter until a numeric condition holds,7,9,77.77777777777777,6,5,3,2
+3,queue_until,Advance until a matching record,4,5,80.0,2,2,3,2
+3,foreach,Process every record in displayed order,9,9,100.0,4,4,5,5
+4,foreach_if,Classify each record using a conditional,1,7,14.285714285714286,5,1,2,0
+4,while_if,Branch inside a state-dependent loop,1,7,14.285714285714286,3,0,4,1
+4,if_loop,Choose between two loops,2,9,22.22222222222222,4,1,5,1
+4,repeat_if,Repeated conditional execution,0,9,0.0,4,0,5,0
+5,nested_repeat,Repeat a block containing repetition,1,11,9.090909090909092,5,1,6,0
+5,foreach_repeat_if,Repeat a conditional for each record,0,3,0.0,1,0,2,0
+5,while_repeat,Counted loop inside a while loop,0,6,0.0,4,0,2,0
+5,branch_nested_loop,Branch into nested repetitions,0,6,0.0,4,0,2,0
+5,until_repeat_if,Until loop containing repetition and branching,0,6,0.0,2,0,4,0
