@@ -286,7 +286,8 @@ Separate launchers are available for every size:
 ```
 
 Replace `2b` with `4b` or `8b` for the other models. Training reuses
-`datasets/seeclick-800-code`; evaluation runs both dev and test. The scripts
+`datasets/seeclick-800-code` and defaults to **10 epochs** for each model;
+evaluation runs both dev and test. The scripts
 support `--help`, custom input/output paths, and training options such as
 `--resume`. See [script usage](docs/gui_owl.md#separate-scripts-for-each-model).
 

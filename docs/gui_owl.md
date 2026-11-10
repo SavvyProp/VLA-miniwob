@@ -32,6 +32,7 @@ Use the same cache environment for fetching, training, and evaluation.
 Training automatically synchronizes the frozen CUDA runtime through uv. It
 defaults to `datasets/seeclick-800-code`, the matching
 `configs/gui_owl_{2b,4b,8b}_3090.json`, and `runs/gui-owl-{2b,4b,8b}-code`.
+Each configuration now requests **10 total epochs** for new runs.
 Evaluation loads that training run's completed adapter, uses
 `configs/suite_800.json`, and writes `runs/gui-owl-{size}-code-dev` and
 `runs/gui-owl-{size}-code-test`. Each split gets a 10,000-call budget by default.
@@ -158,7 +159,7 @@ The configurations differ only in their pinned base model:
 - Gradient checkpointing, batch size 1, gradient accumulation 16.
 - 8,192 total tokens, reserving room for the next action; image processing uses
   the same 65,536–262,144 pixel limits for each size.
-- Three epochs, learning rate 1e-4, cosine schedule, seed 2026.
+- Ten epochs, learning rate 1e-4, cosine schedule, seed 2026.
 
 First validate the 2B inputs without downloading model weights:
 
@@ -200,6 +201,53 @@ Resume restores the newest complete optimizer/scheduler/RNG checkpoint. Data,
 model, runtime, prompt/history settings, and implementation must match the saved
 fingerprint. Change settings using a new output directory. An external export
 is referenced in place; retain its images and metadata for later resume.
+
+### Extend an existing run to ten total epochs
+
+The launchers now use ten-epoch configs. A run started with an older three-epoch
+config must retain its saved configuration for resume: `epochs` is part of its
+fingerprint. Increase the cumulative `max_steps` target instead. The command
+below reads the original configuration and source from the selected run, counts
+optimizer updates using the saved dataset size, and resumes to ten total epochs:
+
+```bash
+uv run --project integrations/gui_owl --extra cuda --frozen \
+  python - runs/gui-owl-2b-code <<'PY'
+import json
+import math
+import sys
+from pathlib import Path
+
+from scriptwob.gui_owl_training import GUIOwlTrainingConfig, train_gui_owl
+
+run = Path(sys.argv[1]).resolve()
+metadata = json.loads((run / "scriptwob_training.json").read_text())
+config = GUIOwlTrainingConfig.model_validate(metadata["config"])
+examples = metadata["dataset"]["metadata"]["examples"]
+batches_per_epoch = math.ceil(examples / config.batch_size)
+updates_per_epoch = math.ceil(batches_per_epoch / config.gradient_accumulation_steps)
+target = 10 * updates_per_epoch
+print(f"Resuming {run.name} to {target} cumulative updates (10 total epochs).", flush=True)
+result = train_gui_owl(
+    metadata["source"], run, config.model_copy(update={"max_steps": target}),
+    resume=True, allow_oracle=metadata["identity"]["allow_oracle"],
+)
+print(json.dumps(result, indent=2))
+PY
+```
+
+Replace `runs/gui-owl-2b-code` with the 4B or 8B training directory as needed.
+For 3,390 next-click samples, batch size 1, and accumulation 16, the pinned
+GUI-Owl Trainer uses 212 updates per epoch, so the target is **2,120 cumulative
+updates**. This is ten epochs in total, including training already completed.
+It uses the latest complete optimizer checkpoint and preserves the existing
+data/model/runtime integrity checks. An already-reached or reduced step target
+is rejected. A positive `max_steps` overrides the original epoch count.
+
+Extending a completed three-epoch run restores its optimizer and scheduler state
+but changes the cosine schedule's endpoint; it does not reproduce the learning
+rate history of a run planned for ten epochs from the beginning. New runs should
+use the ten-epoch configs directly.
 
 ## Evaluate dev and test
 
